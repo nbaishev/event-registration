@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Status:** Approved by user on 2026-10-04; implementation has not started.
+**Status:** Approved by user on 2026-10-04; implementation verified locally; see development log.
 
 **Goal:** Из чистого checkout запустить frontend/backend через Compose и получить воспроизводимые проверки.
 
@@ -69,9 +69,9 @@
 
 ## Execution steps
 
-- [ ] 1. Проверить branch/worktree, создать новую branch/worktree по lifecycle; зафиксировать отсутствие baseline tests в task log до product changes. Не создавать log до разрешённого начала implementation.
-- [ ] 2. Создать locked toolchain и минимальные app entrypoints, необходимые для запуска smoke. Настроить Clock и DB/Alembic без business tables; проверить unit Clock: aware UTC и фиксированное время.
-- [ ] 3. Добавить integration readiness tests: доступная DB → 200, недоступная → 503 без DSN в response. Реализовать endpoints и lifecycle session; выполнить `make test`.
-- [ ] 4. Добавить Compose/Nginx и browser smoke: `/`, `/login`, `/register` доступны через один origin; `/api/health` возвращает JSON. Проверить `docker compose config`, `nginx -t`, `make up`, `make e2e`.
-- [ ] 5. Реализовать canonical targets и CI по engineering rules. Изолировать migration/test stack; проверить empty DB upgrade/check, обнаружение API drift, сохранение `.env` при повторном bootstrap. Generated drift probe выполнять во временной копии, без изменения working output.
-- [ ] 6. Обновить README, выполнить `make check`, затем `make verify`; записать фактические результаты в log, проверить staged diff на secrets и подготовить один PR в `master`.
+- [x] 1. Проверить branch/worktree, создать новую branch/worktree по lifecycle; зафиксировать отсутствие baseline tests в task log до product changes. Не создавать log до разрешённого начала implementation.
+- [x] 2. Создать locked toolchain и минимальные app entrypoints, необходимые для запуска smoke. Настроить Clock и DB/Alembic без business tables; проверить unit Clock: aware UTC и фиксированное время.
+- [x] 3. Добавить integration readiness tests: доступная DB → 200, недоступная → 503 без DSN в response. Реализовать endpoints и lifecycle session; выполнить `make test`.
+- [x] 4. Добавить Compose/Nginx и browser smoke: `/`, `/login`, `/register` доступны через один origin; `/api/health` возвращает JSON. Проверить `docker compose config`, `nginx -t`, `make up`, `make e2e`.
+- [x] 5. Реализовать canonical targets и CI по engineering rules. Изолировать migration/test stack; проверить empty DB upgrade/check, обнаружение API drift, сохранение `.env` при повторном bootstrap. Generated drift probe выполнять во временной копии, без изменения working output.
+- [x] 6. Обновить README, выполнить `make check`, затем `make verify`; записать фактические результаты в log, проверить staged diff на secrets и подготовить один PR в `master`.
