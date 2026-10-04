@@ -66,10 +66,18 @@ def verify(mode: str) -> None:
                 [*compose, "up", "-d", "--wait", "--wait-timeout", "120"],
                 env=environment,
             )
-            run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
             address = subprocess.check_output(
                 [*compose, "port", "nginx", "80"], cwd=ROOT, env=environment, text=True
             ).strip()
+            # Pin the allocated proxy port before recreating services: restarting
+            # an ephemeral mapping can assign another port on Docker Desktop.
+            environment["APP_PORT"] = address.rsplit(":", 1)[1]
+            environment["APP_ORIGIN"] = f"http://{address}"
+            run(
+                [*compose, "up", "-d", "--wait", "--wait-timeout", "120", "nginx"],
+                env=environment,
+            )
+            run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
             run(
                 [*pnpm, "e2e"],
                 cwd=ROOT / "frontend",

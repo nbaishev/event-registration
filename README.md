@@ -1,8 +1,8 @@
 # Event Registration Service
 
 Клиент-серверный сервис регистрации на мероприятия. Текущий этап — Foundation:
-React shell, FastAPI health/readiness, PostgreSQL, Alembic и воспроизводимые проверки.
-Auth, мероприятия, waitlist, билеты и уведомления пока не реализованы.
+React shell, FastAPI health/readiness, PostgreSQL, Alembic и регистрация аккаунта.
+Login/logout/refresh, мероприятия, waitlist, билеты и уведомления пока не реализованы.
 
 ## Требования
 
@@ -24,8 +24,9 @@ Bootstrap устанавливает зависимости по lock files, с�
 `.env.example`, если `.env` ещё нет. Повторный запуск сохраняет существующую
 конфигурацию. Пример содержит только безопасные локальные defaults, не production secrets.
 
-Откройте http://localhost:8080. `/login` и `/register` сейчас показывают Foundation
-shell. Frontend и API работают через Nginx в одном origin.
+Откройте http://localhost:8080/register. Укажите email и пароль длиной 12–128 символов.
+После создания аккаунта форма переходит на `/login`; вход пока не реализован.
+Frontend и API работают через Nginx в одном origin.
 
 ```bash
 curl --fail http://localhost:8080/api/health
@@ -37,9 +38,8 @@ curl --fail http://localhost:8080/api/ready
 http://localhost:8080/api/docs. Backend запускается ровно с одним worker.
 
 Альтернативный запуск после bootstrap: `docker compose up --build`.
-Backend выполняет `alembic upgrade head` перед запуском сервера. Foundation ещё
-не содержит business tables/revisions; конфигурация Alembic уже работоспособна.
-Persistent tables добавляются миграциями соответствующих features.
+Backend выполняет `alembic upgrade head` перед запуском сервера; миграция `0001`
+создаёт таблицу `users`. Дополнительная команда `make migrate` для первого запуска не нужна.
 
 Остановка: `make down`. Данные PostgreSQL сохраняются в Compose volume.
 DB port не публикуется в development stack. Если порт 8080 занят, измените
@@ -47,6 +47,20 @@ APP_PORT и APP_ORIGIN в `.env` согласованно. Container backend п�
 SQLAlchemy собирает URL безопасно, включая reserved characters в password.
 Host tooling получает test URL отдельно.
 Для production HTTP-конфигурация не предназначена; HTTPS/VPS deployment — Day 6.
+
+## Регистрация аккаунта
+
+`GET /api/auth/csrf` выдаёт token и session cookie `csrf_token` (Path `/`, SameSite=Lax,
+без Domain и HttpOnly; Secure в production). Клиент хранит token в памяти и отправляет
+`X-CSRF-Token` с unsafe-запросами. Backend проверяет CSRF и exact Origin до разбора тела.
+`APP_ORIGIN` должен содержать scheme/host/port без trailing slash, path, query и credentials.
+
+`POST /api/auth/register` возвращает 201 с id, нормализованным email и UTC timestamps;
+пароль хранится только как Argon2id hash. Auth cookies при регистрации не выдаются.
+Ошибки: 409 `EMAIL_ALREADY_REGISTERED`, 422 `VALIDATION_ERROR`, 403 `CSRF_INVALID`.
+При недоступности БД возвращается безопасный 503 `SERVICE_UNAVAILABLE`; неожиданные
+ошибки auth возвращают 500 `INTERNAL_ERROR` в том же JSON envelope без внутренних данных.
+Все auth responses содержат `Cache-Control: no-store`.
 
 ## Проверки
 

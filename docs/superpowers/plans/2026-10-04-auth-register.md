@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Status:** Approved by user on 2026-10-04; implementation has not started.
+**Status:** Approved by user on 2026-10-04; implementation completed and verified; awaiting PR review.
 
 **Goal:** Пользователь создаёт аккаунт через `/register` и переходит на `/login`.
 
@@ -80,9 +80,9 @@
 
 ## Execution steps
 
-- [ ] 1. Создать новую branch/worktree, прочитать sources и выполнить baseline `make check`; создать task log до implementation, сообщить failures.
-- [ ] 2. RED: normalizing email, password lengths 11/12/128/129, hash verification и безопасные validation errors; реализовать service/password validation до GREEN.
-- [ ] 3. Добавить User migration/repository; PostgreSQL tests утверждают поля/unique constraint и конкурентный normalized duplicate: один 201, один 409, одна row. Реализовать IntegrityError mapping с rollback; выполнить `make test`.
-- [ ] 4. RED: csrf bootstrap и matrix unsafe methods × invalid cookie/header/Origin; spy подтверждает отсутствие вызова use-case при failure. Реализовать guard/errors/API; подтвердить HTTP statuses, UserResponse и no-store.
-- [ ] 5. Выполнить `make api-generate`. RTL test: submit success → `/login`, duplicate → error, password не попадает в navigation state; реализовать форму/client. Playwright проходит реальный register через Nginx.
-- [ ] 6. Выполнить `make check`, `make verify`; обновить log и README, проверить staged diff на secrets, подготовить один PR в `master`.
+- [x] 1. Создать новую branch/worktree, прочитать sources и выполнить baseline `make check`; создать task log до implementation, сообщить failures.
+- [x] 2. RED: normalizing email, password lengths 11/12/128/129, hash verification и безопасные validation errors; реализовать service/password validation до GREEN.
+- [x] 3. Добавить User migration/repository; PostgreSQL tests утверждают поля/unique constraint и конкурентный normalized duplicate: один 201, один 409, одна row. Реализовать IntegrityError mapping с rollback; выполнить `make test`.
+- [x] 4. RED: csrf bootstrap и matrix unsafe methods × invalid cookie/header/Origin; spy подтверждает отсутствие вызова use-case при failure. Реализовать guard/errors/API; подтвердить HTTP statuses, UserResponse и no-store.
+- [x] 5. Выполнить `make api-generate`. RTL test: submit success → `/login`, duplicate → error, password не попадает в navigation state; реализовать форму/client. Playwright проходит реальный register через Nginx.
+- [x] 6. Выполнить `make check`, `make verify`; обновить log и README, проверить staged diff на secrets, подготовить один PR в `master`.

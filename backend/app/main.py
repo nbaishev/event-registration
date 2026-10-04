@@ -1,9 +1,19 @@
 from typing import Literal
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from app.auth.router import router as auth_router
+from app.common.csrf import AuthSecurityMiddleware
+from app.common.errors import (
+    AppError,
+    ErrorDetail,
+    ErrorResponse,
+    app_error_handler,
+    validation_error_handler,
+)
 from app.common.readiness import database_is_ready
 from app.db.session import DatabaseSession
 
@@ -16,16 +26,6 @@ class ReadinessResponse(BaseModel):
     status: Literal["ready"] = "ready"
 
 
-class ErrorDetail(BaseModel):
-    code: str
-    message: str
-    details: dict[str, object]
-
-
-class ErrorResponse(BaseModel):
-    error: ErrorDetail
-
-
 app = FastAPI(
     title="Event Registration API",
     version="0.1.0",
@@ -33,6 +33,12 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
 )
+
+
+app.add_middleware(AuthSecurityMiddleware)
+app.add_exception_handler(AppError, app_error_handler)
+app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.include_router(auth_router)
 
 
 @app.get("/api/health", response_model=HealthResponse)
