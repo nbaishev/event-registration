@@ -1,7 +1,7 @@
 # Auth Login / Logout
 
 Started at: `2026-10-04T22:53:32+05:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-04T23:33:41+05:00`
 
 ## Initial prompt
 
@@ -44,7 +44,7 @@ Whole-branch review завершён: Critical 0, Important 1, Minor 0. Един
 
 ## Pull Request
 
-Not created yet.
+[PR #4](https://github.com/nbaishev/event-registration/pull/4) — base `master`, head `feat/auth-login-logout`.
 
 ## TDD и промежуточные проверки
 
@@ -112,4 +112,13 @@ Actual result:
 - E2E: `7 passed (4.9s)` + limiter `1 passed (1.6s)` (6 accepted/14 rejected из 20, forged X-Forwarded-For не обходит лимит).
 - `verify: passed (isolated project foundation-verify-5a644e84da6b).` Cleanup завершён.
 
-2026-10-04T23:29:20+05:00 — все acceptance criteria проверены; review fix завершён; PR publication выполняется.
+2026-10-04T23:29:20+05:00 — все acceptance criteria проверены; review fix завершён; PR подготовлен после успешного полного gate.
+
+## Публикация и итог
+
+- 2026-10-04T23:33:41+05:00 — создан PR #4 в master через GitHub connector; worktree сохранён для review.
+- Local commits: `80c1733` implementation, `c4727fe` review fix. Remote equivalents: `22cfb8b` и `617b8b5` (metadata отличаются); SHA trees совпали для обоих commits: `03860cbdfedeaaad81f5f86f6ca516d5c38288a6` и `b93ad66e7632d0690d27542ccc8076b572ffe403`.
+- Final staged secrets scan: exit 0, `7 files; no .env, local JWT secret or private key material.`; `git diff --cached --check` exit 0. Перед этой documentation-only commit scan повторяется.
+- Все acceptance criteria и полный `make verify` подтверждены. Единственное Important замечание reviewer исправлено; deferred minors отсутствуют.
+- CI автоматически запущен для PR; на эту временную отметку его результат ещё не получен. Статус доступен на странице PR и будет проверен перед итоговым ответом.
+- Root master не изменялся; merge не выполнялся.
