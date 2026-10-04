@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 
 from alembic import context
+from app.auth.models import User  # noqa: F401
 from app.common.config import get_settings
 from app.db.base import Base
 

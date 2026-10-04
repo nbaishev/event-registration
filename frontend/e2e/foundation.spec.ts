@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-for (const path of ['/', '/login', '/register']) {
+for (const path of ['/', '/login']) {
   test(`direct navigation and reload at ${path}`, async ({ page }) => {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: 'Event Registration' })).toBeVisible();

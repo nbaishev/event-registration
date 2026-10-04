@@ -1,6 +1,7 @@
 import { Container, CssBaseline, Paper, Stack, Typography } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router';
+import { RegisterPage } from './features/auth/register-page';
 
 const queryClient = new QueryClient();
 function FoundationPage() {
@@ -24,7 +25,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<FoundationPage />} />
           <Route path="/login" element={<FoundationPage />} />
-          <Route path="/register" element={<FoundationPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
