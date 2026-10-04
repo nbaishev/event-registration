@@ -45,3 +45,36 @@ def test_bootstrap_requires_explicit_production_secret(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="explicit JWT_SECRET"):
         ensure_env(tmp_path)
     assert (tmp_path / ".env").read_text() == original
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        "ENVIRONMENT=production # deploy",
+        "export ENVIRONMENT=production",
+        'environment="production" # deploy',
+        "DEPLOY_ENV=production\nENVIRONMENT=${DEPLOY_ENV}",
+    ],
+)
+def test_production_dotenv_forms_require_explicit_secret(
+    tmp_path, monkeypatch, declaration
+):
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("JWT_SECRET", raising=False)
+    path = tmp_path / ".env"
+    path.write_text(declaration + "\nJWT_SECRET=\n")
+    with pytest.raises(ValueError, match="explicit JWT_SECRET"):
+        ensure_env(tmp_path)
+
+
+@pytest.mark.parametrize("key", ["export JWT_SECRET", "jwt_secret", "JWT_SECRET"])
+def test_existing_dotenv_signing_key_is_preserved(tmp_path, monkeypatch, key):
+    import secrets
+
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    path = tmp_path / ".env"
+    original = f'APP_PORT=9876\n{key}="{secrets.token_hex(32)}" # existing\n'
+    path.write_text(original)
+    ensure_env(tmp_path)
+    preserved = path.read_text() == original
+    assert preserved, "existing dotenv signing key changed"

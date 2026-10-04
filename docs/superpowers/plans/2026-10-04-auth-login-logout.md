@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Status:** Approved by user on 2026-10-04; implementation verified locally; whole-branch review/PR in progress.
+**Status:** Approved by user on 2026-10-04; implementation and whole-branch review complete; make verify passed; PR publication in progress.
 
 **Goal:** Пользователь входит, видит текущий аккаунт после reload и выходит с очисткой auth cookies.
 

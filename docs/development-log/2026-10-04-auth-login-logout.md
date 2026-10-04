@@ -40,7 +40,7 @@ Nginx limiter, generated API и screenshots.
 
 Известные ограничения: refresh endpoint/recovery и HTTPS deployment вне scope;
 logout удаляет browser cookies, stateless JWT не отзывается сервером.
-Финальный whole-branch review ожидается.
+Whole-branch review завершён: Critical 0, Important 1, Minor 0. Единственное замечание исправлено и подтверждено RED→GREEN и успешным полным make verify.
 
 ## Pull Request
 
@@ -80,3 +80,36 @@ Result:
 - `verify: passed (isolated project foundation-verify-00e05c06ba4f).`; cleanup завершён.
 
 2026-10-04T23:18:50+05:00 — реализация прошла полный gate, подготовка commit и независимого review.
+
+## Независимый review и один fix pass
+
+- Reviewer проверил весь диапазон `8664ffe..80c1733`, включая все пять Review Focus пунктов.
+- Important: ручной parser bootstrap не учитывал допустимые dotenv export/comments; мог ошибочно сгенерировать production key или заменить existing exported key.
+- 2026-10-04T23:22:45+05:00 — RED `pytest backend/tests/unit/test_bootstrap.py -q`, exit 1: `6 failed, 4 passed in 0.11s`. Tests также покрывают lower-case keys и interpolation; secret values в выводе не раскрывались.
+- 2026-10-04T23:25:19+05:00 — GREEN той же команды: exit 0, `10 passed in 0.07s`. Используется `dotenv_values` как в Settings; существующий непустой ключ сохраняется. Bootstrap сначала выполняет uv sync, затем запускает helper через uv, чтобы parser dependency была доступна.
+- `make bootstrap` с configured PNPM: exit 0; backend dependencies frozen, frontend lockfile up to date; браузер не устанавливался.
+- Первая staged scan остановилась на удалённом `frontend/src/app.test.tsx`; commit был создан до завершения scan из-за отсутствия shell fail-fast. После этого проверен весь committed diff с фильтром present files: exit 0, `40 present files; no .env, local JWT secret or private key material.` Публикация до успешного scan не выполнялась; следующие mutation scripts используют fail-fast.
+
+### Решения по явно исключённым областям reviewer
+
+- Refresh endpoint/recovery остаётся вне задачи по approved plan: expired access требует login; при изменении scope потребуется отдельная реализация refresh.
+- Server-side revocation/reuse detection не добавляется согласно stateless ADR/plan: logout очищает browser cookies; при пересмотре потребуется approved architecture change.
+- Production HTTPS termination/deployment остаётся отдельной deployment task: startup HTTPS validation и Secure cookies уже покрыты; при пересмотре потребуется deployment work.
+
+## Финальная проверка после review fix
+
+Timestamp: `2026-10-04T23:29:20+05:00`
+Command: `make verify PNPM='/tmp/event-registration-tools/node_modules/.bin/corepack pnpm'` с теми же tooling/cache variables.
+Exit code: `0`.
+Actual result:
+- Ruff check/format успешны; mypy `Success: no issues found in 27 source files`.
+- Unit: `150 passed in 4.83s`; полный backend: `186 passed in 12.44s`.
+- Frontend: `14 passed (14)` в development gate и full suite.
+- `OpenAPI drift: none.`
+- `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`
+- Production frontend build, backend/frontend Docker builds и Compose config успешны.
+- `nginx -t`: `syntax is ok`; `test is successful`.
+- E2E: `7 passed (4.9s)` + limiter `1 passed (1.6s)` (6 accepted/14 rejected из 20, forged X-Forwarded-For не обходит лимит).
+- `verify: passed (isolated project foundation-verify-5a644e84da6b).` Cleanup завершён.
+
+2026-10-04T23:29:20+05:00 — все acceptance criteria проверены; review fix завершён; PR publication выполняется.
