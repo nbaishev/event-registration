@@ -344,6 +344,31 @@ make verify
 
 `make verify` не требуется после каждого небольшого изменения.
 
+### Состав quality gates
+
+`make test` выполняет полный backend pytest suite (unit и integration на отдельной PostgreSQL) и frontend Vitest/React Testing Library suite. Playwright запускается отдельно через `make e2e`.
+
+`make check` — быстрый development gate:
+
+- backend: Ruff check, Ruff format check, mypy, unit tests;
+- frontend: ESLint, TypeScript typecheck, Vitest/React Testing Library;
+- OpenAPI drift: экспорт schema из текущего FastAPI app без запущенного HTTP server, генерация TypeScript во временный каталог и сравнение с committed output.
+
+Unit tests в этом gate не требуют PostgreSQL или Compose. Проверка OpenAPI не меняет committed files. PostgreSQL integration, Docker build и Playwright не входят в быстрый gate.
+
+`make verify` — полный gate перед каждым PR:
+
+1. `make check`;
+2. `make test`;
+3. миграционная проверка: пустая изолированная PostgreSQL → `alembic upgrade head`, соответствие revision head и отсутствие расхождения metadata/schema через `alembic check`;
+4. frontend production build и сборка backend/frontend Docker images;
+5. `docker compose config` и `nginx -t`;
+6. запуск изолированного Compose test stack, readiness/same-origin smoke и `make e2e` через Nginx.
+
+Каждый шаг обязателен; любой failure завершает gate ненулевым exit code. Нельзя заменять ещё не настроенную проверку успешной заглушкой или silently skip. Integration/E2E используют отдельные database/project names; проверка миграций никогда не очищает development/production DB. Test stack освобождается и при failure. Повторно выполнять тот же suite внутри одного gate не требуется: результаты `make check` могут переиспользоваться для `make test`, если полный набор tests действительно выполнен.
+
+CI запускает тот же `make verify`. Day 1 Foundation task создаёт реализацию этих команд; до неё команды отсутствуют. Состав gates хранится только здесь, планы ссылаются на этот раздел.
+
 ---
 
 ## Scope restrictions

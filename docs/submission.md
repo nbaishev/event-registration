@@ -17,7 +17,7 @@ GitHub:
 Main branch:
 
 ```text
-main
+master
 ```
 
 Final commit:
