@@ -1,0 +1,53 @@
+import { randomUUID } from 'node:crypto';
+import { expect, test } from '@playwright/test';
+
+test('register login reload logout through the same origin proxy', async ({ page }) => {
+  const email = `session-${randomUUID()}@example.com`;
+  const password = ' a long password ';
+  await page.goto('/register');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Пароль').fill(password);
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Войти' })).toBeVisible();
+  await page.screenshot({ path: '../.verification/login-page.png', fullPage: true });
+  expect((await page.context().cookies()).filter(cookie => cookie.httpOnly)).toHaveLength(0);
+  await page.getByLabel('Email').fill(` ${email.toUpperCase()} `);
+  await page.getByLabel('Пароль').fill(password);
+  const loginResponse = page.waitForResponse(response => response.url().endsWith('/api/auth/login'));
+  await page.getByRole('button', { name: 'Войти' }).click();
+  const response = await loginResponse;
+  expect(response.status()).toBe(200);
+  expect(Object.keys(await response.json()).sort()).toEqual(['created_at', 'email', 'id', 'updated_at']);
+  await expect(page.getByText(email)).toBeVisible();
+  const cookies = await page.context().cookies();
+  for (const [name, path, ttl] of [['access_token', '/api/', 900], ['refresh_token', '/api/auth/refresh', 2592000]] as const) {
+    const cookie = cookies.find(cookie => cookie.name === name)!;
+    expect(cookie.path).toBe(path);
+    expect(cookie.httpOnly).toBe(true);
+    expect(cookie.secure).toBe(false);
+    expect(cookie.sameSite).toBe('Lax');
+    expect(cookie.domain.startsWith('.')).toBe(false);
+    expect(cookie.expires - Date.now() / 1000).toBeGreaterThan(ttl - 30);
+    expect(cookie.expires - Date.now() / 1000).toBeLessThanOrEqual(ttl);
+  }
+  const browserState = await page.evaluate(() => ({ cookie: document.cookie, local: { ...localStorage }, session: { ...sessionStorage }, history: history.state }));
+  expect(browserState.cookie).not.toContain('access_token');
+  expect(browserState.cookie).not.toContain('refresh_token');
+  expect(JSON.stringify(browserState)).not.toContain(password);
+  expect(browserState.local).toEqual({});
+  expect(browserState.session).toEqual({});
+  await page.reload();
+  await expect(page.getByText(email)).toBeVisible();
+  await page.screenshot({ path: '../.verification/account-page.png', fullPage: true });
+  await page.getByRole('button', { name: 'Выйти' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  const remaining = await page.context().cookies();
+  expect(remaining.map(cookie => cookie.name)).not.toContain('access_token');
+  expect(remaining.map(cookie => cookie.name)).not.toContain('refresh_token');
+  expect(remaining.map(cookie => cookie.name)).toContain('csrf_token');
+  expect((await page.request.get('/api/auth/me')).status()).toBe(401);
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByText(email)).not.toBeVisible();
+});

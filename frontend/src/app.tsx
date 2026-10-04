@@ -1,30 +1,20 @@
-import { Container, CssBaseline, Paper, Stack, Typography } from '@mui/material';
+import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
+import { AccountPage } from './features/auth/account-page';
+import { LoginPage } from './features/auth/login-page';
 import { RegisterPage } from './features/auth/register-page';
 
-const queryClient = new QueryClient();
-function FoundationPage() {
-  return (
-    <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Paper variant="outlined" sx={{ p: 4 }}>
-        <Stack spacing={2}>
-          <Typography component="h1" variant="h4">Event Registration</Typography>
-          <Typography>Foundation is running.</Typography>
-          <Typography color="text.secondary">Auth is not implemented yet.</Typography>
-        </Stack>
-      </Paper>
-    </Container>
-  );
-}
-export function App() {
+export function App({ client }: { client?: QueryClient } = {}) {
+  const [queryClient] = useState(() => client ?? new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
       <CssBaseline />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<FoundationPage />} />
-          <Route path="/login" element={<FoundationPage />} />
+          <Route path="/" element={<AccountPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </BrowserRouter>

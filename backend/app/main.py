@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI
@@ -6,6 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.auth.router import router as auth_router
+from app.common.config import get_settings
 from app.common.csrf import AuthSecurityMiddleware
 from app.common.errors import (
     AppError,
@@ -26,7 +29,14 @@ class ReadinessResponse(BaseModel):
     status: Literal["ready"] = "ready"
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    get_settings().validate_startup()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Event Registration API",
     version="0.1.0",
     docs_url="/api/docs",

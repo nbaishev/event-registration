@@ -20,7 +20,7 @@ test:
 check:
 	$(UV) ruff check backend scripts
 	$(UV) ruff format --check backend scripts
-	$(UV) mypy backend/app scripts
+	$(UV) mypy --config-file backend/pyproject.toml backend/app scripts
 	$(UV) pytest backend/tests/unit -q
 	cd frontend && $(PNPM) lint
 	cd frontend && $(PNPM) typecheck

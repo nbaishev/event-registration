@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 for (const path of ['/', '/login']) {
   test(`direct navigation and reload at ${path}`, async ({ page }) => {
     await page.goto(path);
-    await expect(page.getByRole('heading', { name: 'Event Registration' })).toBeVisible();
-    await expect(page.getByText('Auth is not implemented yet.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Войти' })).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'Event Registration' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Войти' })).toBeVisible();
   });
 }
 test('API health and readiness share browser origin', async ({ request }) => {
