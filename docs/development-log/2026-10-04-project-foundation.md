@@ -1,7 +1,7 @@
 # Project Foundation
 
 Started at: `2026-10-04T17:28:10+06:00`
-Finished at: `2026-10-04T17:50:05+06:00`
+Finished at: `2026-10-04T17:58:15+06:00`
 
 ## Initial prompt
 
@@ -22,13 +22,15 @@ Execution prompt (JSON string preserves original trailing space):
 
 - 2026-10-04T17:50:05+06:00 — whole-branch review completed; reserved-character DB credentials regression fixed; final make verify exit 0.
 
+- 2026-10-04T17:58:15+06:00 — PR #2 created; GitHub Verify run 37200252328 completed successfully; PR/CI evidence recorded.
+
 ## Decisions and deviations
 
 - Worktree directory initially ignored via local Git exclude; tracked .gitignore will include it in this task. No unrelated commit on master.
 
 - Versions pinned in lock files; current Starlette uses httpx2 for TestClient. Compatible jest-dom 6.9.1 pinned, esbuild explicitly allowed through pnpm-workspace.yaml.
 - Reviewer Important finding: raw credentials interpolation in Compose URL. Fixed using separate components and SQLAlchemy URL.create; regression test observed RED (`1 failed`) then GREEN (`6 passed` unit suite), final full suite `9 passed`.
-- Review rulings: Auth/throttling/SSE/business schemas/email/HTTPS remain outside Foundation; no extra features added. Repeated suites are permitted and kept simple. Remote CI result is not yet available. Dependency security audit/image-digest pinning are outside this task; pinned image version tags and dependency lock files are used.
+- Review rulings: Auth/throttling/SSE/business schemas/email/HTTPS remain outside Foundation; no extra features added. Repeated suites are permitted and kept simple. Remote CI implementation run passed; evidence below. Dependency security audit/image-digest pinning are outside this task; pinned image version tags and dependency lock files are used.
 
 ## Issues discovered
 
@@ -71,6 +73,16 @@ Environment overrides only for this sandbox: PNPM points to Corepack 0.34.0 unde
 - Development DB sentinel id41 survived isolated make test/E2E and final make verify; verification did not remove development data. Sentinel table then removed from our own development DB.
 - `git diff --cached --check` and staged secrets scan — exit 0; .env/cache files excluded; only development defaults and synthetic test credentials present.
 
+### GitHub CI
+
+Workflow: Verify, run 37200252328, job 111430295756, implementation commit 3590f812a12dffaa4e310b6a226cc04ef9775639.
+
+Command: `make verify`
+Exit code: `0` (step/job conclusion: success).
+Actual output: `9 passed in 0.66s`; frontend `3 passed`; `4 passed (1.7s)`; `No new upgrade operations detected.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; `OpenAPI drift: none.`
+
+Run: https://github.com/nbaishev/event-registration/actions/runs/37200252328
+
 ## Result
 
 Implemented:
@@ -82,7 +94,7 @@ Implemented:
 Known limitations:
 - Auth and business features are intentionally outside this task.
 - Default port 8080 is occupied on the Windows host; local smoke used 18080. Free 8080 or configure APP_PORT/APP_ORIGIN before local launch.
-- Remote CI has not yet run; local equivalent full gate passed.
+- Remote CI implementation run passed; later documentation-only commits run the same workflow again. Current checks are linked from PR #2.
 - ESLint 9 and the jsdom whatwg-encoding transitive package emit package-install deprecation notices; runtime/checks/builds pass. No dependency security audit was performed.
 
 Final verification:
@@ -92,4 +104,8 @@ Final verification:
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/2
+
+Base: master. Head: chore/project-foundation.
+
+Publication via GitHub connector because HTTPS Git credentials are unavailable. Local implementation commit 9de9a2d and remote implementation commit 3590f81 have identical tree 7fcf777efcb74b7846d2b4c897e97cdaa8a1f261; metadata/SHA differ. This follow-up records PR and CI evidence only.
