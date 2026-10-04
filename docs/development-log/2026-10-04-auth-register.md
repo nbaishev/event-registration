@@ -84,3 +84,36 @@ https://github.com/nbaishev/event-registration/pull/3
 Итог: Auth Register реализован в отдельной feat/auth-register от master. Единственное изменение test harness — согласование exact Origin с фактическим выделенным портом. Цена ошибки этого решения — E2E перестаёт представлять реальный same-origin сценарий; положительный и отрицательный E2E проходят без обхода защиты. Известные ограничения: login пока не реализован; production TLS и защита от массовых запросов вне задачи. Minor не отложены.
 
 2026-10-04T21:41:03+05:00 — создан PR #3 через коннектор GitHub. Удалённый коммит 1712827 и локальный 533097c имеют одинаковое дерево b40a9d8dac5093b282f6ce0b2616962388c206c4; метаданные коммитов различаются. CI запускается автоматически; актуальный статус доступен в PR. Эта запись добавляет только сведения о публикации.
+
+## Исправление APP_ORIGIN после ревью
+
+Начало: `2026-10-04T22:28:56+05:00`
+
+Уточняющий запрос:
+
+Исправь обработку `APP_ORIGIN`.
+
+Сейчас `AnyHttpUrl` валидирует и канонизирует URL, но сохраняется исходная строка. Из-за этого, например, `https://Example.com` не совпадает с браузерным `Origin: https://example.com` и возникает `CSRF_INVALID`.
+
+Нужно:
+
+- сохранять канонический origin после валидации;
+- учитывать default ports (`:80`, `:443`);
+- не допускать path/query/fragment в `APP_ORIGIN`;
+- добавить тесты на эти случаи.
+
+Не меняй остальную CSRF-логику.
+
+Объём правки: Settings и регрессионные тесты; middleware и CSRF comparison не меняются. Работа продолжается в feat/auth-register как исправление текущего PR #3.
+
+- Исходный targeted suite Settings/CSRF — код 1, `5 failed, 58 passed`: локальный APP_ORIGIN настроен на localhost:8081, тесты ожидали 8080. Пользовательский .env не изменён; добавлена unit fixture, задающая тестовый origin и очищающая cache Settings.
+- После изоляции origin новые тесты RED — код 1, `14 failed, 68 passed`: сохранение исходного регистра/default ports и принятие пустых query/fragment либо backslash path.
+- Исправление: валидированный AnyHttpUrl используется как источник канонического origin; единственный автоматически добавленный `/` удаляется из сериализации. Явный path остаётся запрещённым; query/fragment проверяются по наличию, а не непустому значению.
+- `uv run --frozen --project backend pytest backend/tests/unit -q` — GREEN, код 0, `99 passed in 2.01s`. Тесты включают lowercase host, default/non-default ports, IPv6, запрещённые URL components и прохождение существующего guard с браузерным canonical Origin.
+- Производственная CSRF-логика не изменялась; новые HTTP-тесты используют существующий middleware. Полный gate выполняется.
+
+- Первый полный gate — код 0: 115 backend, 6 frontend, 6 E2E. Дополнительный тест корневого backslash path дал RED `1 failed, 17 passed`: AnyHttpUrl превращает такой ввод в корневой `/`. Явные backslash в конфигурации также отклоняются; это завершает запрет обоих вариантов разделителя path. Итоговый gate повторяется после этой дополнительной регрессии.
+
+Итоговый `make verify` — код 0: `100 passed in 4.19s` (unit), `116 passed in 4.88s` (полный backend), frontend `6 passed`, E2E `6 passed (3.5s)`; `OpenAPI drift: none.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; сборки, nginx -t и удаление изолированных ресурсов прошли.
+
+Завершение правки: `2026-10-04T22:37:16+05:00`. APP_ORIGIN сохраняется в браузерной канонической форме; explicit path/query/fragment отклоняются. CSRF comparison и middleware не изменены. Подготовленный diff просмотрен на секреты: только безопасные URL/синтетические token fixtures; .env исключён. Публикация — исправление существующего PR #3.

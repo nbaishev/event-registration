@@ -22,17 +22,19 @@ class Settings(BaseSettings):
     @field_validator("app_origin")
     @classmethod
     def validate_origin(cls, value: str) -> str:
-        TypeAdapter(AnyHttpUrl).validate_python(value)
+        canonical = TypeAdapter(AnyHttpUrl).validate_python(value)
         parsed = urlsplit(value)
         if (
             parsed.path
-            or parsed.query
-            or parsed.fragment
+            or "\\" in value
+            or canonical.path not in (None, "/")
+            or canonical.query is not None
+            or canonical.fragment is not None
             or parsed.username is not None
             or parsed.password is not None
         ):
             raise ValueError("APP_ORIGIN must contain only scheme, host and port")
-        return value
+        return str(canonical).removesuffix("/")
 
     @property
     def sqlalchemy_url(self) -> URL:

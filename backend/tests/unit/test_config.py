@@ -27,3 +27,42 @@ def test_explicit_database_url_overrides_components() -> None:
     assert settings.sqlalchemy_url.host == "127.0.0.1"
     assert settings.sqlalchemy_url.port == 1234
     assert settings.sqlalchemy_url.database == "test_db"
+
+
+@pytest.mark.parametrize(
+    "configured,expected",
+    [
+        ("https://Example.com", "https://example.com"),
+        ("http://Example.com:80", "http://example.com"),
+        ("https://Example.com:443", "https://example.com"),
+        ("http://Example.com:443", "http://example.com:443"),
+        ("https://Example.com:80", "https://example.com:80"),
+        ("https://Example.com:8443", "https://example.com:8443"),
+        ("http://[::1]:80", "http://[::1]"),
+        ("https://[::1]:8443", "https://[::1]:8443"),
+    ],
+)
+def test_app_origin_stores_browser_canonical_origin(
+    configured: str, expected: str
+) -> None:
+    assert Settings(_env_file=None, app_origin=configured).app_origin == expected
+
+
+@pytest.mark.parametrize(
+    "configured",
+    [
+        "https://example.com/",
+        "https://example.com/path",
+        "https://example.com?x=1",
+        "https://example.com?",
+        "https://example.com#fragment",
+        "https://example.com#",
+        "https://example.com\\path",
+        "https://example.com\\",
+    ],
+)
+def test_app_origin_rejects_path_query_and_fragment(configured: str) -> None:
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, app_origin=configured)

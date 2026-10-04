@@ -128,3 +128,45 @@ def test_csrf_cookie_contract_and_fresh_random_token(
 def test_configured_origin_rejects_paths_and_non_origins(origin: str) -> None:
     with pytest.raises(ValidationError):
         Settings(_env_file=None, app_origin=origin)
+
+
+@pytest.mark.parametrize(
+    "configured,browser_origin",
+    [
+        ("https://Example.com", "https://example.com"),
+        ("http://Example.com:80", "http://example.com"),
+        ("https://Example.com:443", "https://example.com"),
+        ("https://Example.com:8443", "https://example.com:8443"),
+    ],
+)
+def test_guard_accepts_browser_origin_from_canonical_settings(
+    configured: str,
+    browser_origin: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.common.csrf import AuthSecurityMiddleware
+
+    monkeypatch.setenv("APP_ORIGIN", configured)
+    get_settings.cache_clear()
+    probe = FastAPI()
+    probe.add_middleware(AuthSecurityMiddleware)
+
+    @probe.post("/api/auth/probe")
+    def mutate(body: dict[str, str]) -> dict[str, str]:
+        return body
+
+    try:
+        with TestClient(probe) as client:
+            client.cookies.set("csrf_token", "token")
+            response = client.post(
+                "/api/auth/probe",
+                json={"value": "saved"},
+                headers={
+                    "Origin": browser_origin,
+                    "X-CSRF-Token": "token",
+                },
+            )
+        assert response.status_code == 200
+        assert response.json() == {"value": "saved"}
+    finally:
+        get_settings.cache_clear()
