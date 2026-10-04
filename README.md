@@ -9,22 +9,18 @@ Auth, мероприятия, waitlist, билеты и уведомления �
 - Python 3.12 и uv 0.12.5;
 - Node.js 22.13+ (ветка 22), Corepack 0.34.0; pnpm 10.18.3 закреплён в package.json;
 - Docker Engine и Docker Compose с поддержкой `up --wait`;
-- make; для Chromium — системные browser dependencies.
+- make.
 
 При старом Corepack обновите его: `npm install --global corepack@0.34.0`.
-На Linux зависимости браузера устанавливаются командой
-`cd frontend && corepack pnpm exec playwright install --with-deps chromium`
-после bootstrap (установка OS packages может требовать sudo).
 
 ## Локальный запуск
 
 ```bash
 make bootstrap
 make up
-make migrate
 ```
 
-Bootstrap устанавливает зависимости по lock files и Chromium, создаёт `.env` из
+Bootstrap устанавливает зависимости по lock files, создаёт `.env` из
 `.env.example`, если `.env` ещё нет. Повторный запуск сохраняет существующую
 конфигурацию. Пример содержит только безопасные локальные defaults, не production secrets.
 
@@ -53,6 +49,16 @@ Host tooling получает test URL отдельно.
 Для production HTTP-конфигурация не предназначена; HTTPS/VPS deployment — Day 6.
 
 ## Проверки
+
+Для `make e2e` и `make verify` отдельно установите Chromium после bootstrap:
+
+```bash
+cd frontend && corepack pnpm exec playwright install --with-deps chromium
+```
+
+На Linux установка системных зависимостей браузера может требовать sudo.
+Для запуска backend/frontend и `make check` браузер не нужен. CI устанавливает
+его отдельным шагом.
 
 ```bash
 make check          # быстрый development gate, без Docker/PostgreSQL

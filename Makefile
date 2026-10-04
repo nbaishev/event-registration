@@ -7,7 +7,6 @@ bootstrap:
 	python3 scripts/bootstrap.py
 	uv sync --frozen --project backend
 	cd frontend && $(PNPM) install --frozen-lockfile
-	cd frontend && $(PNPM) exec playwright install chromium
 up:
 	docker compose up -d --build --wait --wait-timeout 120
 down:

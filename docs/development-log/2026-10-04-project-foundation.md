@@ -109,3 +109,26 @@ https://github.com/nbaishev/event-registration/pull/2
 Base: master. Head: chore/project-foundation.
 
 Publication via GitHub connector because HTTPS Git credentials are unavailable. Local implementation commit 9de9a2d and remote implementation commit 3590f81 have identical tree 7fcf777efcb74b7846d2b4c897e97cdaa8a1f261; metadata/SHA differ. This follow-up records PR and CI evidence only.
+
+## Foundation review follow-up
+
+Started at: `2026-10-04T21:37:33+06:00`
+
+Corrective prompt:
+
+Провёл review Foundation. Перед merge внеси только небольшую правку документации: README сейчас предлагает `make up`, а затем `make migrate`, хотя backend уже выполняет `alembic upgrade head` при старте. Оставь только make up. Также **не ставь Playwright browser при каждом bootstrap**. Это тяжёлая зависимость и не нужна разработчику, который просто хочет запустить backend/frontend.
+
+Baseline: `make check` — exit 0 — 6 backend unit tests, 3 frontend component tests; lint/type checks passed; `OpenAPI drift: none.`
+
+Scope: remove redundant startup migration command; install browser explicitly only for E2E/full verification. CI already has a separate browser-install step.
+
+Verification (existing documented cache/tool overrides):
+
+- `make bootstrap` — exit 0 — frozen dependencies already up to date; existing `.env` preserved; no browser-install command executed.
+- `make -n bootstrap` — exit 0 — only configuration setup, uv sync and pnpm install; no Playwright browser installation.
+- `make verify` — exit 0 — backend `9 passed in 0.98s`; frontend `3 passed`; Playwright `4 passed (2.9s)`; `OpenAPI drift: none.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; production/Docker builds, nginx config and project-scoped cleanup passed.
+- `git diff --check` — exit 0 — no whitespace errors.
+
+Result: README startup uses bootstrap then make up; migration remains automatic in backend startup. Chromium installation is documented separately for E2E/full verification; existing separate CI installation retained. Only README, Makefile and this log changed.
+
+Finished at: `2026-10-04T21:39:26+06:00`
