@@ -1,7 +1,7 @@
 # Task 06 — Event Draft Editing
 
 Started at: `2026-10-06T00:20:22+05:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-06T01:07:35+05:00`
 
 ## Initial prompt
 
@@ -23,6 +23,7 @@ Execution prompt:
 - 2026-10-06T00:54+05:00 — Independent code review found a schedule-second precision issue in unchanged `datetime-local` values. Fixed by preserving the original UTC instant unless its local time, timezone, or DST fold choice changes; added a text-only edit regression test. Made `regenerate_slug` optional in generated TypeScript and explicit-null-invalid at runtime.
 - 2026-10-06T01:00+05:00 — Final post-review-fix `make verify` passed: unit 157, integration 273, frontend 62, migrations, build, general E2E 11, event-drafts 1, login limiter 1.
 - 2026-10-06T01:01+05:00 — Reviewer follow-up confirmed the precision issue is fixed and found no Critical or Important remaining. Minor OpenAPI mismatch remains: generated optional nullable types allow `null` although the request validator rejects it.
+- 2026-10-06T01:07:35+05:00 — Created [PR #7](https://github.com/nbaishev/event-registration/pull/7), open for review; no merge performed.
 
 ## Decisions and deviations
 
@@ -42,7 +43,7 @@ Result: Ruff check/format and mypy passed; backend unit `157 passed in 7.34s`; f
 
 ## Result
 
-Implementation and review completed; ready for PR. Scope is DRAFT partial update, explicit DRAFT slug regeneration, and owner edit UI. No published-event editing, delete/cancel, waitlist, notification, or SSE behavior.
+Implementation and review completed. PR #7 is open for review. Scope is DRAFT partial update, explicit DRAFT slug regeneration, and owner edit UI. No published-event editing, delete/cancel, waitlist, notification, or SSE behavior.
 
 ## Verification
 
@@ -61,4 +62,4 @@ Implementation and review completed; ready for PR. Scope is DRAFT partial update
 
 ## Pull Request
 
-Not created yet.
+[PR #7 — feat(events): edit draft events](https://github.com/nbaishev/event-registration/pull/7)

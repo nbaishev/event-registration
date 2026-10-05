@@ -2,7 +2,7 @@
 
 > **For agentic workers:** План утверждён пользователем. Начинать implementation только после отдельной команды пользователя; выполнять через superpowers:executing-plans.
 
-**Status:** Implementation and independent review completed; final `make verify` passed. Ready for PR.
+**Status:** PR #7 is open for review; implementation and independent review completed; final `make verify` passed.
 
 **Goal:** Owner меняет черновик, а сохранённые значения сохраняются после reload без изменения ownership/status.
 
@@ -111,7 +111,7 @@
 - [x] Implement lock-safe DRAFT PATCH contract and regenerate OpenAPI types.
 - [x] RED/GREEN edit form prefill/save/error/reload behavior and query cache updates; Playwright edit → reload and rejected edit preserves stored state.
 - [x] Independent code review completed; Important seconds-precision finding fixed and re-reviewed; checks and remaining limitation recorded in the development log.
-- [ ] Create task PR from `feat/event-draft-edit` to `master`; do not merge without separate user authorization.
+- [x] Create [PR #7](https://github.com/nbaishev/event-registration/pull/7) from `feat/event-draft-edit` to `master`; PR remains open for review.
 
 ### Verification evidence
 
