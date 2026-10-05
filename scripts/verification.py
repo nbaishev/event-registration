@@ -1,6 +1,7 @@
 """Run isolated integration, build and browser verification; always clean up."""
 
 import os
+import secrets
 import shlex
 import subprocess
 import sys
@@ -20,6 +21,7 @@ def run(
 def verify(mode: str) -> None:
     environment = os.environ.copy()
     environment.update(
+        JWT_SECRET=secrets.token_hex(32),
         APP_PORT="0",
         POSTGRES_DB="foundation_verification",
         POSTGRES_USER="event_registration",
@@ -79,7 +81,14 @@ def verify(mode: str) -> None:
             )
             run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
             run(
-                [*pnpm, "e2e"],
+                [*pnpm, "e2e", "--grep-invert", "login limiter"],
+                cwd=ROOT / "frontend",
+                env=environment | {"E2E_BASE_URL": f"http://{address}"},
+            )
+            # Reset the rate zone in this unique test project; no developer stack is touched.
+            run([*compose, "restart", "nginx"], env=environment)
+            run(
+                [*pnpm, "e2e", "--grep", "login limiter"],
                 cwd=ROOT / "frontend",
                 env=environment | {"E2E_BASE_URL": f"http://{address}"},
             )

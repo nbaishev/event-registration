@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Status:** Approved by user on 2026-10-04; implementation has not started.
+**Status:** Approved by user on 2026-10-04; implementation and whole-branch review complete; make verify passed; published as PR #4.
 
 **Goal:** Пользователь входит, видит текущий аккаунт после reload и выходит с очисткой auth cookies.
 
@@ -93,9 +93,9 @@ Nginx: `limit_req_zone $binary_remote_addr zone=auth_login:10m rate=10r/m`; exac
 
 ## Execution steps
 
-- [ ] 1. Создать новую branch/worktree от актуального master; baseline `make check`; создать task log перед product changes, сообщить failures.
-- [ ] 2. RED: token types/claims/signature/algorithm/issuer/audience и Clock boundaries (`exp-1 second`, `exp`); реализовать issuance/validation до GREEN.
-- [ ] 3. RED: HTTP login/me/logout contracts, normalized credentials, unknown User, cookie flags и точные deletion paths, повторный logout. Реализовать services/dependency/router; выполнить PostgreSQL integration tests.
-- [ ] 4. Настроить Nginx limiter; isolated burst из 20 login requests даёт хотя бы один 429 AUTH_RATE_LIMITED, csrf endpoint не лимитируется этой zone; не использовать sleep для token boundary tests. Проверить `nginx -t`.
-- [ ] 5. Regenerate API. RTL проверяет anonymous/loading/authenticated состояния, success navigation и logout cache reset. Реализовать UI; Playwright проверяет reload, cookies и полный flow через proxy.
-- [ ] 6. Выполнить `make check`, `make verify`; обновить log/README и secrets check; подготовить один PR в master.
+- [x] 1. Создать новую branch/worktree от актуального master; baseline `make check`; создать task log перед product changes, сообщить failures.
+- [x] 2. RED: token types/claims/signature/algorithm/issuer/audience и Clock boundaries (`exp-1 second`, `exp`); реализовать issuance/validation до GREEN.
+- [x] 3. RED: HTTP login/me/logout contracts, normalized credentials, unknown User, cookie flags и точные deletion paths, повторный logout. Реализовать services/dependency/router; выполнить PostgreSQL integration tests.
+- [x] 4. Настроить Nginx limiter; isolated burst из 20 login requests даёт хотя бы один 429 AUTH_RATE_LIMITED, csrf endpoint не лимитируется этой zone; не использовать sleep для token boundary tests. Проверить `nginx -t`.
+- [x] 5. Regenerate API. RTL проверяет anonymous/loading/authenticated состояния, success navigation и logout cache reset. Реализовать UI; Playwright проверяет reload, cookies и полный flow через proxy.
+- [x] 6. Выполнить `make check`, `make verify`; обновить log/README и secrets check; подготовить один PR в master.

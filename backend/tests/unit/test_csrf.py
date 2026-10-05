@@ -95,6 +95,8 @@ def test_csrf_cookie_contract_and_fresh_random_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("ENVIRONMENT", environment)
+    if environment == "production":
+        monkeypatch.setenv("APP_ORIGIN", "https://localhost:8080")
     get_settings.cache_clear()
     try:
         with TestClient(app) as client:

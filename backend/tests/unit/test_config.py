@@ -66,3 +66,30 @@ def test_app_origin_rejects_path_query_and_fragment(configured: str) -> None:
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None, app_origin=configured)
+
+
+def test_jwt_secret_required_without_environment_or_env_file(monkeypatch):
+    from pydantic import ValidationError
+
+    monkeypatch.delenv("JWT_SECRET", raising=False)
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)
+
+
+@pytest.mark.parametrize("secret", ["", "short", "я" * 15])
+def test_jwt_secret_requires_at_least_32_bytes(secret):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, jwt_secret=secret)
+
+
+def test_production_http_configuration_rejected_at_startup(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with pytest.raises(ValueError, match="HTTPS"):
+        with TestClient(app):
+            pass

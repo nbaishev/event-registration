@@ -1,8 +1,8 @@
 # Event Registration Service
 
-Клиент-серверный сервис регистрации на мероприятия. Текущий этап — Foundation:
-React shell, FastAPI health/readiness, PostgreSQL, Alembic и регистрация аккаунта.
-Login/logout/refresh, мероприятия, waitlist, билеты и уведомления пока не реализованы.
+Клиент-серверный сервис регистрации на мероприятия. Реализованы Foundation и
+Auth Register/Login/Logout: PostgreSQL, Alembic, FastAPI и React UI аккаунта.
+Refresh endpoint, мероприятия, waitlist, билеты и уведомления пока не реализованы.
 
 ## Требования
 
@@ -22,10 +22,13 @@ make up
 
 Bootstrap устанавливает зависимости по lock files, создаёт `.env` из
 `.env.example`, если `.env` ещё нет. Повторный запуск сохраняет существующую
-конфигурацию. Пример содержит только безопасные локальные defaults, не production secrets.
+конфигурацию и добавляет отсутствующий local `JWT_SECRET` (32 случайных bytes,
+без вывода). Существующий secret сохраняется. В `.env.example` secret пустой;
+production требует явно заданный secret и HTTPS `APP_ORIGIN`.
 
 Откройте http://localhost:8080/register. Укажите email и пароль длиной 12–128 символов.
-После создания аккаунта форма переходит на `/login`; вход пока не реализован.
+После создания аккаунта форма переходит на `/login`. После входа `/` показывает
+email и кнопку выхода; reload восстанавливает аккаунт через `/api/auth/me`.
 Frontend и API работают через Nginx в одном origin.
 
 ```bash
@@ -61,6 +64,25 @@ Host tooling получает test URL отдельно.
 При недоступности БД возвращается безопасный 503 `SERVICE_UNAVAILABLE`; неожиданные
 ошибки auth возвращают 500 `INTERNAL_ERROR` в том же JSON envelope без внутренних данных.
 Все auth responses содержат `Cache-Control: no-store`.
+
+## Вход и выход
+
+`POST /api/auth/login` принимает email/password с той же валидацией, что register,
+и возвращает 200 UserResponse. Неверные credentials → 401 `AUTH_INVALID_CREDENTIALS`.
+`GET /api/auth/me` возвращает текущий User или 401 `AUTH_REQUIRED`.
+`POST /api/auth/logout` возвращает 204 без body, требует CSRF/Origin и удаляет cookies;
+повторный logout также 204. Logout сохраняет CSRF cookie и очищает frontend query cache.
+
+Access/refresh — stateless HS256 JWT в host-only HttpOnly SameSite=Lax cookies:
+`access_token` (Path `/api/`, 900 seconds), `refresh_token`
+(Path `/api/auth/refresh`, 2592000 seconds). Secure включён в production.
+JWT не возвращаются в JSON и не хранятся в browser storage.
+До реализации refresh истёкший access требует повторного входа. Logout удаляет
+browser cookies; выданный JWT не отзывается на сервере.
+
+Nginx ограничивает только точный login route: `10r/m`, `burst=5 nodelay` по реальному
+client IP. Rejection → 429 `AUTH_RATE_LIMITED` в общем JSON envelope с no-store;
+произвольный X-Forwarded-For не меняет limiter key.
 
 ## Проверки
 

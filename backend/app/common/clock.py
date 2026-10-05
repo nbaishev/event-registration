@@ -19,3 +19,7 @@ class FixedClock:
 
     def now(self) -> datetime:
         return self._value
+
+
+def get_clock() -> Clock:
+    return SystemClock()

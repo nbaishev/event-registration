@@ -14,6 +14,10 @@ class RegisterRequest(BaseModel):
         return value.strip().lower() if isinstance(value, str) else value
 
 
+class LoginRequest(RegisterRequest):
+    pass
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID

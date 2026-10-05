@@ -1,3 +1,4 @@
+import secrets
 from collections.abc import Iterator
 
 import pytest
@@ -9,6 +10,7 @@ from app.common.config import get_settings
 def isolated_unit_origin(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     # Unit request tests must not depend on the developer's local Compose port.
     monkeypatch.setenv("APP_ORIGIN", "http://localhost:8080")
+    monkeypatch.setenv("JWT_SECRET", secrets.token_hex(32))
     get_settings.cache_clear()
     try:
         yield
