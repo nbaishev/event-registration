@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AccountPage } from './features/auth/account-page';
 import { LoginPage } from './features/auth/login-page';
+import { SessionBoundary } from './features/auth/session';
 import { RegisterPage } from './features/auth/register-page';
 
 export function App({ client }: { client?: QueryClient } = {}) {
@@ -12,6 +13,7 @@ export function App({ client }: { client?: QueryClient } = {}) {
     <QueryClientProvider client={queryClient}>
       <CssBaseline />
       <BrowserRouter>
+        <SessionBoundary />
         <Routes>
           <Route path="/" element={<AccountPage />} />
           <Route path="/login" element={<LoginPage />} />

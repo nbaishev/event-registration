@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { App } from '../../app';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+let App: typeof import('../../app')['App'];
+beforeEach(async () => { vi.resetModules(); App = (await import('../../app')).App; });
 
 const user = { id: '00000000-0000-4000-8000-000000000001', email: 'alice@example.com', created_at: '2026-10-04T12:00:00Z', updated_at: '2026-10-04T12:00:00Z' };
 const failure = (code: string) => ({ error: { code, message: 'arbitrary server text', details: {} } });
@@ -10,6 +11,7 @@ function setup(path: string, loginError?: string, client = new QueryClient()) {
   window.history.replaceState({}, '', path);
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (input, options) => {
     if (input === '/api/auth/csrf') return new Response(JSON.stringify({ csrf_token: 'test-token' }));
+    if (input === '/api/auth/refresh') return new Response(JSON.stringify(failure('AUTH_REFRESH_INVALID')), { status: 401 });
     if (input === '/api/auth/me') return new Response(JSON.stringify(authenticated ? user : failure('AUTH_REQUIRED')), { status: authenticated ? 200 : 401 });
     if (input === '/api/auth/login') {
       expect(options?.credentials).toBe('same-origin');
@@ -39,7 +41,11 @@ describe('Auth session', () => {
   it('keeps private content hidden during bootstrap and redirects anonymous users', async () => {
     window.history.replaceState({}, '', '/');
     let respond!: (response: Response) => void;
-    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { respond = resolve; })));
+    vi.stubGlobal('fetch', vi.fn(async (input) => {
+      if (input === '/api/auth/csrf') return new Response(JSON.stringify({ csrf_token: 'test-token' }));
+      if (input === '/api/auth/refresh') return new Response(JSON.stringify(failure('AUTH_REFRESH_INVALID')), { status: 401 });
+      return new Promise<Response>(resolve => { respond = resolve; });
+    }));
     render(<App />);
     expect(screen.getByRole('status')).toHaveTextContent('Проверяем сессию');
     expect(screen.queryByText(user.email)).not.toBeInTheDocument();
@@ -68,6 +74,7 @@ describe('Auth session', () => {
     await screen.findByText(user.email);
     fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
     await waitFor(() => expect(window.location.pathname).toBe('/login'));
+    expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible();
     expect(screen.queryByText(user.email)).not.toBeInTheDocument();
     expect(client.getQueryData(['private', 'events'])).toBeUndefined();
     expect(client.getQueryData(['auth', 'me'])).toBeUndefined();
@@ -91,4 +98,90 @@ describe('Auth session', () => {
     expect(screen.queryByText(user.email)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Повторить' })).toBeEnabled();
   });
+});
+
+it('clears private cache and redirects when background recovery loses the session', async () => {
+  const client = setup('/');
+  client.setQueryData(['private', 'events'], ['private data']);
+  await screen.findByText(user.email);
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return new Response(JSON.stringify({ csrf_token: 'test-token' }));
+    return new Response(JSON.stringify(failure(input === '/api/auth/refresh' ? 'AUTH_REFRESH_INVALID' : 'AUTH_REQUIRED')), { status: 401 });
+  }));
+  await client.invalidateQueries({ queryKey: ['auth', 'me'] });
+  await waitFor(() => expect(window.location.pathname).toBe('/login'));
+  expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible();
+  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(client.getQueryData(['private', 'events'])).toBeUndefined();
+  expect(client.getQueryData(['auth', 'me'])).toBeUndefined();
+});
+
+it('keeps logout pending until refresh settles and never restores its user afterwards', async () => {
+  const client = setup('/');
+  await screen.findByText(user.email);
+  let release!: (response: Response) => void;
+  const refresh = new Promise<Response>(resolve => { release = resolve; });
+  const events: string[] = [];
+  let finishLogout!: (response: Response) => void;
+  const logoutResponse = new Promise<Response>(resolve => { finishLogout = resolve; });
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return new Response(JSON.stringify({ csrf_token: 'test-token' }));
+    if (input === '/api/auth/refresh') { events.push('refresh'); return refresh; }
+    if (input === '/api/auth/logout') { events.push('logout'); return logoutResponse; }
+    return new Response(JSON.stringify(failure('AUTH_REQUIRED')), { status: 401 });
+  }));
+  const refetch = client.invalidateQueries({ queryKey: ['auth', 'me'] });
+  await waitFor(() => expect(events).toEqual(['refresh']));
+  fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+  expect(screen.getByRole('button', { name: 'Выходим…' })).toBeDisabled();
+  expect(events).toEqual(['refresh']);
+  release(new Response(JSON.stringify(user)));
+  await refetch;
+  await waitFor(() => expect(events).toEqual(['refresh', 'logout']));
+  expect(window.location.pathname).toBe('/');
+  finishLogout(new Response(null, { status: 204 }));
+  await waitFor(() => expect(window.location.pathname).toBe('/login'));
+  expect(events).toEqual(['refresh', 'logout']);
+  expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible();
+  expect(screen.queryByText(user.email)).not.toBeInTheDocument();
+  expect(client.getQueryData(['auth', 'me'])).toBeUndefined();
+});
+
+it('redirects a known anonymous session when returning to the root inside the SPA', async () => {
+  setup('/');
+  await screen.findByText(user.email);
+  fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+  expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible();
+  window.history.pushState({}, '', '/');
+  fireEvent(window, new PopStateEvent('popstate'));
+  await waitFor(() => expect(window.location.pathname).toBe('/login'));
+  expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible();
+});
+
+it('keeps the cached account and exposes retry when logout fails after refresh settles', async () => {
+  const client = setup('/');
+  await screen.findByText(user.email);
+  let release!: (response: Response) => void;
+  const refresh = new Promise<Response>(resolve => { release = resolve; });
+  const events: string[] = []; let logouts = 0, renewed = false;
+  let respondMe!: (response: Response) => void;
+  const slowMe = new Promise<Response>(resolve => { respondMe = resolve; });
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return new Response(JSON.stringify({ csrf_token: 'test-token' }));
+    if (input === '/api/auth/refresh') { events.push('refresh'); const response = await refresh; renewed = true; return response; }
+    if (input === '/api/auth/logout') { logouts++; return logouts === 1 ? new Response(JSON.stringify(failure('CSRF_INVALID')), { status: 403 }) : new Response(null, { status: 204 }); }
+    return renewed ? slowMe : new Response(JSON.stringify(failure('AUTH_REQUIRED')), { status: 401 });
+  }));
+  const refetch = client.invalidateQueries({ queryKey: ['auth', 'me'] });
+  await waitFor(() => expect(events).toEqual(['refresh']));
+  fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+  release(new Response(JSON.stringify(user)));
+  await refetch;
+  expect(await screen.findByRole('alert')).toHaveTextContent('Повторите попытку');
+  expect(window.location.pathname).toBe('/');
+  expect(screen.getByText(user.email)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Выйти' })).toBeEnabled();
+  respondMe(new Response(JSON.stringify(user)));
+  fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+  expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible(); expect(logouts).toBe(2);
 });

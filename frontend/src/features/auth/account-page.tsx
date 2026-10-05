@@ -2,7 +2,7 @@ import { Alert, Button, Container, Paper, Stack, Typography } from '@mui/materia
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router';
-import { ApiError, apiRequest } from '../../api/client';
+import { ApiError, getAuthPhase, logoutSession } from '../../api/client';
 import { useSession } from './session';
 
 export function AccountPage() {
@@ -16,7 +16,7 @@ export function AccountPage() {
     setPending(true);
     setError(undefined);
     try {
-      await apiRequest<void>('/api/auth/logout', { method: 'POST' });
+      await logoutSession();
       await queryClient.cancelQueries();
       queryClient.clear();
       navigate('/login', { replace: true });
@@ -27,6 +27,8 @@ export function AccountPage() {
       setPending(false);
     }
   }
+  if (getAuthPhase() === 'anonymous') return <Navigate to="/login" replace />;
+  if (pending && !session.data) return <Typography role="status" sx={{ p: 4 }}>Выходим…</Typography>;
   if (session.isPending) return <Typography role="status" sx={{ p: 4 }}>Проверяем сессию…</Typography>;
   if (session.isError) return (
     <Container maxWidth="sm" sx={{ py: 8 }}><Stack spacing={2}>

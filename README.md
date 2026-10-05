@@ -1,8 +1,8 @@
 # Event Registration Service
 
 Клиент-серверный сервис регистрации на мероприятия. Реализованы Foundation и
-Auth Register/Login/Logout: PostgreSQL, Alembic, FastAPI и React UI аккаунта.
-Refresh endpoint, мероприятия, waitlist, билеты и уведомления пока не реализованы.
+Auth Register/Login/Logout/Refresh: PostgreSQL, Alembic, FastAPI и React UI аккаунта.
+Мероприятия, waitlist, билеты и уведомления пока не реализованы.
 
 ## Требования
 
@@ -77,8 +77,17 @@ Access/refresh — stateless HS256 JWT в host-only HttpOnly SameSite=Lax cookie
 `access_token` (Path `/api/`, 900 seconds), `refresh_token`
 (Path `/api/auth/refresh`, 2592000 seconds). Secure включён в production.
 JWT не возвращаются в JSON и не хранятся в browser storage.
-До реализации refresh истёкший access требует повторного входа. Logout удаляет
-browser cookies; выданный JWT не отзывается на сервере.
+Защищённые API calls явно задают `requiresAuth: true`; публичные запросы
+не ограничиваются auth phase. При 401 `AUTH_REQUIRED` защищённого запроса клиент один раз вызывает
+`POST /api/auth/refresh`: 200 UserResponse и новый access cookie. Исходный refresh
+не переустанавливается и истекает через 30 дней после входа. Параллельные запросы
+разделяют результат одной refresh attempt, в том числе failed; новый ручной запрос
+после failure может повторить recovery. Каждый запрос повторяется максимум один раз.
+Вход в другой аккаунт ждёт текущий refresh и блокирует новую recovery до login response.
+Невалидный refresh → 401 `AUTH_REFRESH_INVALID`, удаление обеих auth cookies,
+очистка query cache и переход на `/login`. Network/403/5xx показывают ошибку.
+Logout блокирует recovery, ждёт уже начатый refresh, затем удаляет browser cookies;
+выданный JWT не отзывается на сервере.
 
 Nginx ограничивает только точный login route: `10r/m`, `burst=5 nodelay` по реальному
 client IP. Rejection → 429 `AUTH_RATE_LIMITED` в общем JSON envelope с no-store;

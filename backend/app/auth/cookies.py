@@ -38,3 +38,16 @@ def clear_auth_cookies(response: Response, settings: Settings) -> None:
             samesite="lax",
             secure=settings.environment == "production",
         )
+
+
+def set_access_cookie(response: Response, token: str, settings: Settings) -> None:
+    name, path, ttl = AUTH_COOKIES[0]
+    response.set_cookie(
+        name,
+        token,
+        path=path,
+        max_age=ttl,
+        httponly=True,
+        samesite="lax",
+        secure=settings.environment == "production",
+    )
