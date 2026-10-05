@@ -20,24 +20,35 @@ class TokenPair:
     refresh: str = field(repr=False)
 
 
+def _encode_token(
+    user_id: UUID, issued_at: int, kind: str, ttl: int, settings: Settings
+) -> str:
+    return jwt.encode(
+        {
+            "sub": str(user_id),
+            "iat": issued_at,
+            "exp": issued_at + ttl,
+            "iss": ISSUER,
+            "aud": AUDIENCE,
+            "token_type": kind,
+        },
+        settings.jwt_secret.get_secret_value(),
+        algorithm="HS256",
+    )
+
+
+def issue_access(user_id: UUID, clock: Clock, settings: Settings) -> str:
+    return _encode_token(
+        user_id, int(clock.now().timestamp()), "access", ACCESS_TTL, settings
+    )
+
+
 def issue_tokens(user_id: UUID, clock: Clock, settings: Settings) -> TokenPair:
     issued_at = int(clock.now().timestamp())
-
-    def encode(kind: str, ttl: int) -> str:
-        return jwt.encode(
-            {
-                "sub": str(user_id),
-                "iat": issued_at,
-                "exp": issued_at + ttl,
-                "iss": ISSUER,
-                "aud": AUDIENCE,
-                "token_type": kind,
-            },
-            settings.jwt_secret.get_secret_value(),
-            algorithm="HS256",
-        )
-
-    return TokenPair(encode("access", ACCESS_TTL), encode("refresh", REFRESH_TTL))
+    return TokenPair(
+        _encode_token(user_id, issued_at, "access", ACCESS_TTL, settings),
+        _encode_token(user_id, issued_at, "refresh", REFRESH_TTL, settings),
+    )
 
 
 def verify_token(

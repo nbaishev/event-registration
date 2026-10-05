@@ -7,7 +7,7 @@ from app.auth import repository
 from app.auth.models import User
 from app.auth.passwords import hash_password, verify_password
 from app.auth.schemas import LoginRequest, RegisterRequest
-from app.auth.tokens import TokenPair, issue_tokens, verify_token
+from app.auth.tokens import TokenPair, issue_access, issue_tokens, verify_token
 from app.common.clock import Clock
 from app.common.config import Settings
 from app.common.errors import AppError
@@ -53,3 +53,20 @@ def current_user(
     if user is None:
         raise AppError(401, "AUTH_REQUIRED", "Authentication is required.")
     return user
+
+
+def refresh_access(
+    session: Session, refresh_token: str, clock: Clock, settings: Settings
+) -> tuple[User, str]:
+    try:
+        user_id = verify_token(refresh_token, "refresh", clock, settings)
+    except AppError as exc:
+        if exc.code != "AUTH_REQUIRED":
+            raise
+        raise AppError(
+            401, "AUTH_REFRESH_INVALID", "Refresh token is invalid."
+        ) from None
+    user = repository.find_user_by_id(session, user_id)
+    if user is None:
+        raise AppError(401, "AUTH_REFRESH_INVALID", "Refresh token is invalid.")
+    return user, issue_access(user.id, clock, settings)

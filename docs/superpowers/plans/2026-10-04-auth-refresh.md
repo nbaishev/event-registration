@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Status:** Approved by user on 2026-10-04; implementation has not started.
+**Status:** Approved by user on 2026-10-04; implementation verified on 2026-10-05, final review / PR in progress.
 
 **Goal:** Expired access восстанавливается через valid refresh; terminal refresh failure возвращает пользователя на login без циклов и восстановления после logout.
 
@@ -77,9 +77,9 @@
 
 ## Execution steps
 
-- [ ] 1. Новая branch/worktree от актуального master; baseline `make check`; task log перед implementation, существующие failures сообщить.
-- [ ] 2. RED: valid/missing/tampered/expired/wrong-type token, missing User и boundary exp; реализовать refresh use-case до GREEN.
-- [ ] 3. HTTP integration: success 200 UserResponse + access Set-Cookie без refresh renewal; 401 cleanup; csrf/origin 403; expired access не блокирует refresh. Реализовать endpoint и regenerate API.
-- [ ] 4. RED client tests с controllable promises: несколько AUTH_REQUIRED → одна refresh attempt; retry один раз; refresh 401 → login; 403/5xx/network не создают loop; in-flight refresh → logout → cookies cleared и UI anonymous. Реализовать recovery и session generation.
-- [ ] 5. Playwright проходит реальный expired-access recovery и terminal expired-refresh flow через Nginx, без sleep для temporal boundaries; проверить итоговый Day 1 сценарий.
+- [x] 1. Новая branch/worktree от актуального master; baseline `make check`; task log перед implementation, существующие failures сообщить.
+- [x] 2. RED: valid/missing/tampered/expired/wrong-type token, missing User и boundary exp; реализовать refresh use-case до GREEN.
+- [x] 3. HTTP integration: success 200 UserResponse + access Set-Cookie без refresh renewal; 401 cleanup; csrf/origin 403; expired access не блокирует refresh. Реализовать endpoint и regenerate API.
+- [x] 4. RED client tests с controllable promises: несколько AUTH_REQUIRED → одна refresh attempt; retry один раз; refresh 401 → login; 403/5xx/network не создают loop; in-flight refresh → logout → cookies cleared и UI anonymous. Реализовать recovery и session generation.
+- [x] 5. Playwright проходит реальный expired-access recovery и terminal expired-refresh flow через Nginx, без sleep для temporal boundaries; проверить итоговый Day 1 сценарий.
 - [ ] 6. `make check`, `make verify`, README/log/secret review; один PR в master. Day 1 считается выполненным после merge и успешного полного gate.

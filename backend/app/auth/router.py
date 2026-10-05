@@ -1,17 +1,18 @@
 import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import JSONResponse
 
-from app.auth.cookies import clear_auth_cookies, set_auth_cookies
+from app.auth.cookies import clear_auth_cookies, set_access_cookie, set_auth_cookies
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
 from app.auth.schemas import CsrfResponse, LoginRequest, RegisterRequest, UserResponse
-from app.auth.service import login_user, register_user
+from app.auth.service import login_user, refresh_access, register_user
 from app.common.clock import Clock
 from app.common.clock import get_clock as get_clock
 from app.common.config import Settings, get_settings
-from app.common.errors import ErrorResponse
+from app.common.errors import AppError, ErrorResponse, error_response
 from app.db.session import DatabaseSession
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -104,3 +105,34 @@ def logout(settings: Annotated[Settings, Depends(get_settings)]) -> Response:
     response = Response(status_code=204)
     clear_auth_cookies(response, settings)
     return response
+
+
+@router.post(
+    "/refresh",
+    response_model=UserResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+        503: {"model": ErrorResponse},
+    },
+)
+def refresh(
+    request: Request,
+    response: Response,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> UserResponse | JSONResponse:
+    try:
+        user, access = refresh_access(
+            session, request.cookies.get("refresh_token", ""), clock, settings
+        )
+    except AppError as exc:
+        if exc.code != "AUTH_REFRESH_INVALID":
+            raise
+        failure = error_response(exc.status, exc.code, exc.message)
+        clear_auth_cookies(failure, settings)
+        return failure
+    set_access_cookie(response, access, settings)
+    return UserResponse.model_validate(user)
