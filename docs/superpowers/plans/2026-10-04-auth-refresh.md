@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Status:** Approved by user on 2026-10-04; implementation verified on 2026-10-05, final review / PR in progress.
+**Status:** Approved by user on 2026-10-04; Implemented and verified on 2026-10-05; final review findings fixed; [PR #5](https://github.com/nbaishev/event-registration/pull/5) open against master. Day 1 completion awaits merge.
 
 **Goal:** Expired access восстанавливается через valid refresh; terminal refresh failure возвращает пользователя на login без циклов и восстановления после logout.
 
@@ -82,4 +82,4 @@
 - [x] 3. HTTP integration: success 200 UserResponse + access Set-Cookie без refresh renewal; 401 cleanup; csrf/origin 403; expired access не блокирует refresh. Реализовать endpoint и regenerate API.
 - [x] 4. RED client tests с controllable promises: несколько AUTH_REQUIRED → одна refresh attempt; retry один раз; refresh 401 → login; 403/5xx/network не создают loop; in-flight refresh → logout → cookies cleared и UI anonymous. Реализовать recovery и session generation.
 - [x] 5. Playwright проходит реальный expired-access recovery и terminal expired-refresh flow через Nginx, без sleep для temporal boundaries; проверить итоговый Day 1 сценарий.
-- [ ] 6. `make check`, `make verify`, README/log/secret review; один PR в master. Day 1 считается выполненным после merge и успешного полного gate.
+- [x] 6. `make check`, `make verify`, README/log/secret review; один PR в master. Day 1 считается выполненным после merge и успешного полного gate.

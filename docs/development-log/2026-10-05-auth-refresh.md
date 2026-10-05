@@ -1,7 +1,7 @@
 # Auth Refresh
 
 Started at: `2026-10-05T19:47:24+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-05T20:33:03+06:00`
 
 ## Initial prompt
 
@@ -32,6 +32,8 @@ Execution prompt (JSON сохраняет завершающий пробел):
 - 2026-10-05T20:27:29+06:00 — независимый fresh-context review: 3 Important, 0 Critical/Minor; fix pass RED: 6 failed / 33 passed → GREEN 39 passed. Дополнительно browser regression account switch.
 
 - 2026-10-05T20:29:34+06:00 — итоговый gate после review: exit 0, 205 backend / 39 frontend / 12 E2E; все Important исправлены.
+
+- 2026-10-05T20:33:03+06:00 — PR #5 создан в master; реализация и review-fix опубликованы, merge не выполнялся; worktree сохранён.
 
 ## Decisions and deviations
 
@@ -101,7 +103,7 @@ GREEN (2026-10-05T20:24:20+06:00): exit `0`, `39 passed (39)`.
 Command: `make verify` с configured PNPM/Corepack/UV cache и Chromium path.
 Exit code: `0`.
 Result: quick unit `157 passed in 2.93s`; frontend `39 passed (39)`; backend `205 passed in 18.76s`; `OpenAPI drift: none.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; production и Docker builds успешны; browser `11 passed (11.0s)` + limiter `1 passed (2.1s)`; `verify: passed (isolated project foundation-verify-58692d7979c0).` Containers/volumes этой проверки удалены.
-Secret scan перед первым commit: 17 staged files, local key/.env/private keys отсутствуют. Перед review-fix commit scan повторяется.
+Secret scan перед первым commit: 17 staged files, local key/.env/private keys отсутствуют. Review-fix commit scan: 7 staged files, exit `0`, local key/.env/private keys отсутствуют. Документальный final commit проверяется отдельно.
 
 ## Result
 
@@ -111,4 +113,6 @@ Secret scan перед первым commit: 17 staged files, local key/.env/priv
 
 ## Pull Request
 
-Not created yet.
+[PR #5](https://github.com/nbaishev/event-registration/pull/5) → `master`.
+
+GitHub implementation commit: `b178db43176f2d2f2157f6d03bd158bdeef52d6d`; review fix: `b2f1d1f1231a201de437900683d8136206dc6a81`. Их Git trees совпадают с локальными commits `4ce253f` / `3602cca`; опубликованный verified implementation tree: `3e9dd31c0884a83e841f26e33594225beaec6338`. CI запущен; локальный full gate успешен. Финальный commit меняет только status/log, повторное выполнение тестов для этих документов не требовалось.
