@@ -157,3 +157,31 @@ it('redirects a known anonymous session when returning to the root inside the SP
   await waitFor(() => expect(window.location.pathname).toBe('/login'));
   expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible();
 });
+
+it('keeps the cached account and exposes retry when logout fails after refresh settles', async () => {
+  const client = setup('/');
+  await screen.findByText(user.email);
+  let release!: (response: Response) => void;
+  const refresh = new Promise<Response>(resolve => { release = resolve; });
+  const events: string[] = []; let logouts = 0, renewed = false;
+  let respondMe!: (response: Response) => void;
+  const slowMe = new Promise<Response>(resolve => { respondMe = resolve; });
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return new Response(JSON.stringify({ csrf_token: 'test-token' }));
+    if (input === '/api/auth/refresh') { events.push('refresh'); const response = await refresh; renewed = true; return response; }
+    if (input === '/api/auth/logout') { logouts++; return logouts === 1 ? new Response(JSON.stringify(failure('CSRF_INVALID')), { status: 403 }) : new Response(null, { status: 204 }); }
+    return renewed ? slowMe : new Response(JSON.stringify(failure('AUTH_REQUIRED')), { status: 401 });
+  }));
+  const refetch = client.invalidateQueries({ queryKey: ['auth', 'me'] });
+  await waitFor(() => expect(events).toEqual(['refresh']));
+  fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+  release(new Response(JSON.stringify(user)));
+  await refetch;
+  expect(await screen.findByRole('alert')).toHaveTextContent('Повторите попытку');
+  expect(window.location.pathname).toBe('/');
+  expect(screen.getByText(user.email)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Выйти' })).toBeEnabled();
+  respondMe(new Response(JSON.stringify(user)));
+  fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
+  expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible(); expect(logouts).toBe(2);
+});

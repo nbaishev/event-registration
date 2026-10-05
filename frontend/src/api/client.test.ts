@@ -131,3 +131,57 @@ it('permits manual recovery after a failed logout without accepting old response
   expect(await client.refreshSession()).toEqual(user);
   await client.logoutSession(); expect(client.getAuthPhase()).toBe('anonymous'); expect(logouts).toBe(2);
 });
+it.each([403, 503, 'network'] as const)('shares settled refresh %s with late failures, but permits a new manual request', async status => {
+  const late = deferred<Response>(); let refreshes = 0, lateReads = 0;
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return json({ csrf_token: 'csrf-fixture' });
+    if (input === '/api/auth/refresh') { refreshes++; if (status === 'network') throw new TypeError('Network unavailable'); return error(status === 403 ? 'CSRF_INVALID' : 'SERVICE_UNAVAILABLE', status); }
+    if (input === '/api/protected/late' && ++lateReads === 1) return late.promise;
+    return error();
+  }));
+  const first = client.apiRequest('/api/protected/first', {}).catch(cause => cause);
+  const second = client.apiRequest('/api/protected/late', {}).catch(cause => cause);
+  const failure = await first; late.resolve(error());
+  expect(await second).toBe(failure); expect(refreshes).toBe(1);
+  await client.apiRequest('/api/protected/new', {}).catch(() => undefined);
+  expect(refreshes).toBe(2);
+});
+it('serializes login behind old refresh and blocks recovery during the account switch', async () => {
+  const late = deferred<Response>(); const loginResponse = deferred<Response>(); const events: string[] = [];
+  let cookieOwner = 'alice';
+  const other = { ...user, email: 'bob@example.com' };
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return json({ csrf_token: 'csrf-fixture' });
+    if (input === '/api/auth/refresh') { events.push('refresh'); const response = await late.promise; cookieOwner = 'alice'; return response; }
+    if (input === '/api/auth/login') { events.push('login'); const response = await loginResponse.promise; cookieOwner = 'bob'; return response; }
+    return json(cookieOwner === 'bob' ? other : user);
+  }));
+  const refresh = client.refreshSession().catch(cause => cause);
+  await waitFor(() => expect(events).toEqual(['refresh']));
+  const login = client.apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify({ email: other.email, password: 'a long password' }) });
+  expect(client.getAuthPhase()).toBe('logging-in');
+  await expect(client.refreshSession()).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+  expect(events).toEqual(['refresh']);
+  late.resolve(json(user));
+  await waitFor(() => expect(events).toEqual(['refresh', 'login']));
+  await expect(client.refreshSession()).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+  loginResponse.resolve(json(other)); expect(await login).toEqual(other);
+  expect(await refresh).toMatchObject({ code: 'AUTH_REQUIRED' });
+  expect(await client.apiRequest('/api/auth/me', {})).toEqual(other);
+});
+it('logout also waits for an already sent login before clearing its cookies', async () => {
+  const late = deferred<Response>(); const events: string[] = []; let authenticated = false;
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return json({ csrf_token: 'csrf-fixture' });
+    if (input === '/api/auth/login') { events.push('login'); const response = await late.promise; authenticated = true; return response; }
+    if (input === '/api/auth/logout') { events.push('logout'); authenticated = false; return new Response(null, { status: 204 }); }
+    return error();
+  }));
+  const login = client.apiRequest('/api/auth/login', { method: 'POST' }).catch(cause => cause);
+  await waitFor(() => expect(events).toEqual(['login']));
+  const logout = client.logoutSession();
+  await client.apiRequest('/api/protected/while-logging-out', {}).catch(() => undefined);
+  expect(events).toEqual(['login']); late.resolve(json(user)); await logout;
+  expect(await login).toMatchObject({ code: 'AUTH_REQUIRED' }); expect(authenticated).toBe(false);
+  expect(events).toEqual(['login', 'logout']);
+});

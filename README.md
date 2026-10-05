@@ -80,7 +80,9 @@ JWT не возвращаются в JSON и не хранятся в browser st
 При 401 `AUTH_REQUIRED` защищённого запроса клиент один раз вызывает
 `POST /api/auth/refresh`: 200 UserResponse и новый access cookie. Исходный refresh
 не переустанавливается и истекает через 30 дней после входа. Параллельные запросы
-разделяют одну refresh attempt; каждый повторяется максимум один раз.
+разделяют результат одной refresh attempt, в том числе failed; новый ручной запрос
+после failure может повторить recovery. Каждый запрос повторяется максимум один раз.
+Вход в другой аккаунт ждёт текущий refresh и блокирует новую recovery до login response.
 Невалидный refresh → 401 `AUTH_REFRESH_INVALID`, удаление обеих auth cookies,
 очистка query cache и переход на `/login`. Network/403/5xx показывают ошибку.
 Logout блокирует recovery, ждёт уже начатый refresh, затем удаляет browser cookies;

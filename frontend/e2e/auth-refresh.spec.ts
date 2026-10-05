@@ -103,3 +103,48 @@ test('logout waits for an in-flight refresh and clears its new access cookie', a
   await expect(page.getByText(user.email)).not.toBeVisible();
   expect((await page.request.get('/api/auth/me')).status()).toBe(401);
 });
+
+test('old refresh cannot overwrite cookies after login as another account', async ({ page }) => {
+  const first = await registerAndLogin(page);
+  const secondEmail = `switch-${randomUUID()}@example.com`;
+  // Create B using the UI in this document, preserving the CSRF token in memory.
+  // Then return to A's account via SPA history so its pending refresh is retained.
+  await page.goBack();
+  await page.getByRole('link', { name: 'Нет аккаунта? Зарегистрироваться' }).click();
+  await page.getByLabel('Email').fill(secondEmail);
+  await page.getByLabel('Пароль').fill('a long test password');
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  // A is still authenticated; navigate back to its cached account without reload.
+  // Push the account route through the router's popstate listener.
+  await page.evaluate(() => { history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); });
+  await expect(page.getByText(first.email)).toBeVisible();
+  await expireCookie(page.context(), first.id, 'access');
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  let started!: () => void;
+  const refreshing = new Promise<void>(resolve => { started = resolve; });
+  await page.route('**/api/auth/refresh', async route => {
+    started(); await held;
+    const response = await route.fetch(); await route.fulfill({ response });
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+  await refreshing;
+  await page.goBack();
+  await expect(page).toHaveURL(/\/login$/);
+  let loginRequests = 0;
+  page.on('request', request => { if (request.url().endsWith('/api/auth/login')) loginRequests++; });
+  await page.getByLabel('Email').fill(secondEmail);
+  await page.getByLabel('Пароль').fill('a long test password');
+  const loggedIn = page.waitForResponse(response => response.url().endsWith('/api/auth/login'));
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await expect(page.getByRole('button', { name: 'Входим…' })).toBeDisabled();
+  expect(loginRequests).toBe(0);
+  release(); expect((await loggedIn).status()).toBe(200);
+  await expect(page.getByText(secondEmail)).toBeVisible();
+  expect(loginRequests).toBe(1);
+  const me = await page.request.get('/api/auth/me');
+  expect(me.status()).toBe(200);
+  expect((await me.json() as { email: string }).email).toBe(secondEmail);
+  await expect(page.getByText(first.email)).not.toBeVisible();
+});

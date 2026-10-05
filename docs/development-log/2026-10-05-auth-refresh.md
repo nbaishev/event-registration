@@ -29,12 +29,28 @@ Execution prompt (JSON сохраняет завершающий пробел):
 
 - 2026-10-05T20:15:17+06:00 — итоговый `make verify`: exit 0; 205 backend / 33 frontend / 11 E2E.
 
+- 2026-10-05T20:27:29+06:00 — независимый fresh-context review: 3 Important, 0 Critical/Minor; fix pass RED: 6 failed / 33 passed → GREEN 39 passed. Дополнительно browser regression account switch.
+
+- 2026-10-05T20:29:34+06:00 — итоговый gate после review: exit 0, 205 backend / 39 frontend / 12 E2E; все Important исправлены.
+
 ## Decisions and deviations
 
 - Исходный refresh token/cookie/expiration не продлевается; cookies в JavaScript не читаются.
 - Client generation предотвращает публикацию ответов старой сессии после logout. Logout ждёт settlement текущего refresh, затем отправляет server logout.
 - SSE/EventSource, rotation/revocation/sliding lifetime остаются вне scope.
 - Timestamps журнала получены из среды в user-facing timezone Asia/Bishkek.
+
+- Review ruling: single-flight учитывает settlement ошибки, а не только successful renewal. Старые запросы получают тот же результат attempt; новые ручные запросы после failure могут начать recovery.
+- Review ruling: login сериализуется после refresh/logout и блокирует recovery; logout также ждёт уже отправленный login. Это сохраняет cookie ownership при смене аккаунта.
+- Stale-generation response теперь отменяет прежний Query с revert; не превращается в подтверждённый anonymous `null`, поэтому logout failure сохраняет account и retry.
+
+### Решения по Declined to judge
+
+- Cross-tab coordination не добавляется: plan задаёт Promise внутри клиента. Пользователь получает защиту порядка в одной вкладке; cost при неверном ожидании — межвкладочная гонка остаётся.
+- Rotation/reuse detection/revocation не добавляются: явно stateless MVP; cost — украденный JWT действует до exp.
+- SSE/EventSource reconnect остаётся Day 4: интерфейс refresh готов; cost — live reconnect ещё отсутствует.
+- Timeout ожидания refresh при logout не вводится: plan требует settlement; cost — зависший transport задерживает logout, pending UI остаётся.
+- Malformed/non-JSON errors и streaming bodies не перерабатываются: текущие auth interfaces JSON; cost — transport error остаётся generic, stream body retry не поддерживается.
 
 ## Issues discovered
 
@@ -76,10 +92,21 @@ Command: `cd frontend && corepack pnpm exec vitest run src/features/auth/account
 Logout response ordering: exit `1`, `1 failed | 9 passed` → GREEN в полном gate.
 Known anonymous SPA navigation: exit `1`, `1 failed | 10 passed` → GREEN в полном gate.
 
+### Review fix pass
+Command: `cd frontend && corepack pnpm test`.
+RED (2026-10-05T20:23:05+06:00): exit `1`, `6 failed | 33 passed (39)`.
+GREEN (2026-10-05T20:24:20+06:00): exit `0`, `39 passed (39)`.
+
+### Финальная проверка после review
+Command: `make verify` с configured PNPM/Corepack/UV cache и Chromium path.
+Exit code: `0`.
+Result: quick unit `157 passed in 2.93s`; frontend `39 passed (39)`; backend `205 passed in 18.76s`; `OpenAPI drift: none.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; production и Docker builds успешны; browser `11 passed (11.0s)` + limiter `1 passed (2.1s)`; `verify: passed (isolated project foundation-verify-58692d7979c0).` Containers/volumes этой проверки удалены.
+Secret scan перед первым commit: 17 staged files, local key/.env/private keys отсутствуют. Перед review-fix commit scan повторяется.
+
 ## Result
 
 Реализованы access-only refresh, cleanup invalid refresh, bounded single-flight recovery, session loss и logout ordering; Day 1 browser flow проверен.
-Независимый review перед PR ещё выполняется.
+Независимый read-only review выполнен; 3 Important исправлены одним TDD pass, Critical/Minor отсутствуют. Повторный review не запускался по executing-plans workflow.
 Ограничения: stateless JWT без rotation/revocation/sliding lifetime; SSE reconnect остаётся Day 4. Day 1 завершается после merge.
 
 ## Pull Request
