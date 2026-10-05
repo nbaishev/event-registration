@@ -52,11 +52,11 @@ Result: backend unit `157 passed in 4.87s`; frontend `44 passed (44)`; Ruff, myp
 
 Known limitations: PATCH, publish/public page, delete/cancel, Registration/SSE/email не входят в задачу. Vite предупреждает о production bundle больше 500 kB (518.18 kB); build успешен, splitting не входит в Task 05. Capacity ограничена физическим PostgreSQL int32; NUL text и UTC overflow — 422.
 
-Integration: commit `0f5de85` создан на feature branch `feat/event-draft-create` в worktree `.worktrees/event-draft-create`, base master `ece5102`. Push и PR не созданы.
+Integration: локальные commits `0f5de85`, `acd8904`; worktree `.worktrees/event-draft-create`; base master `ece5102`. Опубликованная GitHub ветка `feat/event-draft-create` содержит итоговое состояние файлов, созданное connector commit `37d9cb71326b74b651674581d484e7b9d150ee08` поверх удалённого `master` `2d83323818daccd6e128725c023816161c7633e5` (локальные commit objects через shell не отправились из-за отсутствия git credentials). PR #6 открыт; details ниже.
 
 ## Pull Request
 
-Not created yet. Push остановлен auto-review; причина и требуемое разрешение приведены в записи ниже.
+PR #6: https://github.com/nbaishev/event-registration/pull/6 — open, base `master`, head `feat/event-draft-create`; mergeable при последней проверке.
 
 ## TDD evidence
 
@@ -102,7 +102,8 @@ Result: `238 passed in 28.72s` backend unit/integration на PostgreSQL; fronten
 
 Screenshots: `docs/screenshots/event-create.png`, `docs/screenshots/event-detail.png` — реальные Playwright captures, визуально просмотрены, credentials отсутствуют.
 
-### Integration attempt
+### Integration and Pull Request
 
-Команда: `git push -u origin feat/event-draft-create`.
-Результат: отклонено sandbox auto-review до выполнения push. Причина: destination GitHub remote ownership/trust не подтверждены; пользователь не дал явного разрешения на публикацию кода. Обход через другой инструмент не предпринимался. Ветка и worktree сохранены; commit `0f5de85` локальный. PR пока отсутствует.
+Первый `git push -u origin feat/event-draft-create` до разрешения пользователя был отклонён sandbox auto-review: ownership/trust destination не подтверждены, отсутствовало явное разрешение на публикацию. Пользователь разрешил публикацию. Повторный shell push завершился ошибкой credentials: `could not read Username for 'https://github.com': No such device or address`.
+
+Проверена GitHub repository permission: `admin/maintain/push: true`; удалённый master: `2d83323818daccd6e128725c023816161c7633e5`. По явному разрешению пользователя подключённым GitHub integration создана ветка `feat/event-draft-create` с commit `37d9cb71326b74b651674581d484e7b9d150ee08`, содержащим итоговый snapshot файлов относительно remote master. PR #6 открыт в `master`: https://github.com/nbaishev/event-registration/pull/6. Проверка PR metadata: `open`, `mergeable: true`, `merged: false`.
