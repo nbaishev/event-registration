@@ -40,13 +40,40 @@ test('owner creates a draft, reloads details, sees mine and cannot read another 
   await expect(page.getByText('Черновик', { exact: true })).toBeVisible();
   await expect(page.getByText('Открытая встреча сообщества. <b>Обычный текст</b>')).toBeVisible();
   await expect(page.locator('b')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Редактировать черновик' }).click();
+  await expect(page.getByRole('heading', { name: 'Редактировать мероприятие' })).toBeVisible();
+  await page.screenshot({ path: '../.verification/event-edit.png', fullPage: true });
+  let rejectNextPatch = true;
+  await page.route('**/api/events/*', async route => {
+    if (route.request().method() === 'PATCH' && rejectNextPatch) {
+      rejectNextPatch = false;
+      await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Invalid request.', details: {} } }) });
+      return;
+    }
+    await route.continue();
+  });
+  await page.getByLabel('Название').fill('Rejected change');
+  await page.getByRole('button', { name: 'Сохранить изменения' }).click();
+  await expect(page.getByRole('alert')).toContainText('Проверьте данные формы');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Редактировать мероприятие' })).toBeVisible();
+  await expect(page.getByLabel('Название')).toHaveValue('Community meetup');
+  await page.getByLabel('Название').fill('Community meetup edited');
+  await page.getByLabel('Описание').fill('Текст после редактирования. <i>Обычный текст</i>');
+  const updatedResponse = page.waitForResponse(r => r.request().method() === 'PATCH' && r.url().endsWith(`/api/events/${event.id}`));
+  await page.getByRole('button', { name: 'Сохранить изменения' }).click();
+  expect((await updatedResponse).status()).toBe(200);
+  await expect(page.getByRole('heading', { name: 'Community meetup edited' })).toBeVisible();
+  await expect(page.getByText('Текст после редактирования. <i>Обычный текст</i>')).toBeVisible();
   await page.reload();
   await expect(page.getByText('Количество мест: 25')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Community meetup edited' })).toBeVisible();
+  await expect(page.getByText('Текст после редактирования. <i>Обычный текст</i>')).toBeVisible();
   await page.screenshot({ path: '../.verification/event-detail.png', fullPage: true });
   await page.getByRole('link', { name: 'Мои мероприятия' }).click();
-  await expect(page.getByRole('link', { name: 'Community meetup' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Community meetup edited' })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('link', { name: 'Community meetup' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Community meetup edited' })).toBeVisible();
   const other = await browser.newContext({ baseURL });
   try {
     const otherPage = await other.newPage();

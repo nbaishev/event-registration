@@ -8,6 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
     StrictInt,
     StrictStr,
     field_validator,
@@ -68,6 +69,75 @@ class EventCreateRequest(BaseModel):
         if self.ends_at <= self.starts_at:
             raise ValueError("End must be after start")
         return self
+
+
+class EventPatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: Annotated[StrictStr | None, Field(min_length=1, max_length=200)] = None
+    description: Annotated[StrictStr | None, Field(min_length=1, max_length=10000)] = (
+        None
+    )
+    starts_at: AwareDatetime | None = None
+    ends_at: AwareDatetime | None = None
+    timezone: StrictStr | None = None
+    capacity: Annotated[StrictInt | None, Field(ge=1, le=2147483647)] = None
+    regenerate_slug: StrictBool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def require_change(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        if value.get("regenerate_slug", False) is None:
+            raise ValueError("regenerate_slug cannot be null")
+        if any(item is None for key, item in value.items() if key != "regenerate_slug"):
+            raise ValueError("Event values cannot be null")
+        if not any(
+            key != "regenerate_slug" or item is True for key, item in value.items()
+        ):
+            raise ValueError("At least one change is required")
+        return value
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def trim_optional_title(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("starts_at", "ends_at", mode="before")
+    @classmethod
+    def require_optional_iso_datetime(cls, value: object) -> object:
+        if value is not None and not isinstance(value, (str, datetime)):
+            raise ValueError("An ISO-8601 datetime is required")
+        return value
+
+    @field_validator("starts_at", "ends_at")
+    @classmethod
+    def normalize_optional_utc(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        try:
+            return value.astimezone(UTC)
+        except OverflowError:
+            raise ValueError("Datetime is outside the supported UTC range") from None
+
+    @field_validator("title", "description")
+    @classmethod
+    def valid_optional_text(cls, value: str | None) -> str | None:
+        if value is not None and "\x00" in value:
+            raise ValueError("Text cannot contain NUL")
+        return value
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_optional_timezone(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError("Invalid IANA timezone") from None
+        return value
 
 
 class EventSummary(BaseModel):

@@ -10,6 +10,7 @@ import { OrganizerLayout } from './features/events/organizer-layout';
 import { EventCreatePage } from './features/events/event-create-page';
 import { EventListPage } from './features/events/event-list-page';
 import { EventDetailPage } from './features/events/event-detail-page';
+import { EventEditPage } from './features/events/event-edit-page';
 
 export function App({ client }: { client?: QueryClient } = {}) {
   const [queryClient] = useState(() => client ?? new QueryClient());
@@ -25,6 +26,7 @@ export function App({ client }: { client?: QueryClient } = {}) {
           <Route path="/organizer/events" element={<OrganizerLayout />}>
             <Route index element={<EventListPage />} />
             <Route path="new" element={<EventCreatePage />} />
+            <Route path=":eventId/edit" element={<EventEditPage />} />
             <Route path=":eventId" element={<EventDetailPage />} />
           </Route>
         </Routes>

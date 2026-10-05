@@ -8,8 +8,18 @@ from app.auth.models import User
 from app.common.clock import Clock, get_clock
 from app.common.errors import ErrorResponse
 from app.db.session import DatabaseSession
-from app.events.schemas import EventCreateRequest, EventResponse, EventSummary
-from app.events.service import create_event, get_owned_event, list_owned_events
+from app.events.schemas import (
+    EventCreateRequest,
+    EventPatchRequest,
+    EventResponse,
+    EventSummary,
+)
+from app.events.service import (
+    create_event,
+    get_owned_event,
+    list_owned_events,
+    patch_owned_event,
+)
 
 
 def private_response(response: Response) -> None:
@@ -57,3 +67,20 @@ def detail(
     event_id: UUID, user: CurrentUser, session: DatabaseSession
 ) -> EventResponse:
     return EventResponse.model_validate(get_owned_event(session, user.id, event_id))
+
+
+@router.patch(
+    "/{event_id}",
+    response_model=EventResponse,
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
+def patch_event(
+    event_id: UUID,
+    body: EventPatchRequest,
+    user: CurrentUser,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> EventResponse:
+    return EventResponse.model_validate(
+        patch_owned_event(session, clock, user.id, event_id, body)
+    )

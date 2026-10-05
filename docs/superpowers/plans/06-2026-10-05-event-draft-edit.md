@@ -2,7 +2,7 @@
 
 > **For agentic workers:** План утверждён пользователем. Начинать implementation только после отдельной команды пользователя; выполнять через superpowers:executing-plans.
 
-**Status:** Approved by user on 2026-10-05. Реализация не начата; ожидает отдельной команды пользователя.
+**Status:** Implementation and independent review completed; final `make verify` passed. Ready for PR.
 
 **Goal:** Owner меняет черновик, а сохранённые значения сохраняются после reload без изменения ownership/status.
 
@@ -29,7 +29,7 @@
 - FastAPI OpenAPI — source of truth; generated frontend files не редактируются вручную. После API change выполняется `make api-generate`.
 - Backend остаётся с одним worker. Transactional outbox, Ticket table, RefreshSession, Redis Pub/Sub, application rate limiter, Redux, microservices и unrelated refactoring не добавляются.
 - Каждая задача — один vertical-slice PR и новая branch/worktree от обновлённого master после merge dependencies. Development log создаётся только при начале разрешённой implementation task.
-- План и решения опроса утверждены. Работа начинается только после отдельного разрешения пользователя на implementation.
+- План и решения опроса утверждены; пользователь отдельно разрешил implementation.
 - Общие quality gates и полный DoD определены в [engineering.md](../../agent-rules/engineering.md) и [AGENTS.md](../../../AGENTS.md); development loop — `make check`, pre-PR gate — `make verify`. Секреты не попадают в commits, screenshots и logs.
 - Task 06 редактирует только DRAFT. PUBLISHED/CANCELLED изменения не принимаются: 409 EVENT_NOT_EDITABLE / 409 EVENT_CANCELLED соответственно.
 - При `now >=` исходного `starts_at` capacity/starts_at/ends_at/timezone changes запрещены. DRAFT schedule edit обновляет `schedule_updated_at`, но не создаёт email tasks.
@@ -73,7 +73,7 @@
 
 ## Утверждённые решения
 
-Пользователь утвердил в чате: `1А, 2Б, 3А, 4А, 5А, 6А, 7А, 8А`. Здесь зафиксированы решения, относящиеся к Task 06. Это approval поведения, не разрешение начать implementation.
+Пользователь утвердил в чате: `1А, 2Б, 3А, 4А, 5А, 6А, 7А, 8А`. Здесь зафиксированы решения, относящиеся к Task 06.
 
 | Вопрос | Утверждённое решение |
 |---|---|
@@ -99,5 +99,25 @@
 
 - [x] Утвердить решения опроса: `1А, 2Б, 3А, 4А, 5А, 6А, 7А, 8А`.
 - [x] Утвердить Goal, Scope, PR boundary и план задачи: пользователь «Планы утверждаю.»
-- [ ] Перед реализацией конкретизировать технические шаги, schemas и signatures в рамках утверждённого scope. Изменение требований или scope требует отдельного согласования.
-- [ ] Только после разрешения на implementation создать branch/worktree, подтвердить baseline и создать task development log.
+- [x] Перед реализацией конкретизировать технические шаги, schemas и signatures в рамках утверждённого scope. Изменение требований или scope требует отдельного согласования.
+- [x] После разрешения создать branch/worktree от merged Task 05, подтвердить baseline и создать task development log до изменения кода.
+
+## Execution interfaces
+
+`EventPatchRequest` accepts optional supplied fields and `regenerate_slug`; `model_fields_set` distinguishes omitted from explicit null. `patch_owned_event(session, clock, owner_id, event_id, body) -> Event` owns lock/state/merged-value validation and persistence. Repository exposes `find_event_for_update(...)` and atomic savepoint-backed update. `PATCH /api/events/{event_id}` returns `EventResponse` (200). The edit UI route is `/organizer/events/:eventId/edit`; form updates owner-scoped detail and mine query caches only after success.
+
+- [x] Task 05 merge dependency confirmed; create isolated worktree from updated `master`, bootstrap, baseline `make check`, create task log.
+- [x] RED/GREEN HTTP and PostgreSQL tests: partial merge validation, ownership/state errors, temporal boundary, timestamp rules, slug stability/regeneration/collision and atomic rollback.
+- [x] Implement lock-safe DRAFT PATCH contract and regenerate OpenAPI types.
+- [x] RED/GREEN edit form prefill/save/error/reload behavior and query cache updates; Playwright edit → reload and rejected edit preserves stored state.
+- [x] Independent code review completed; Important seconds-precision finding fixed and re-reviewed; checks and remaining limitation recorded in the development log.
+- [ ] Create task PR from `feat/event-draft-edit` to `master`; do not merge without separate user authorization.
+
+### Verification evidence
+
+- Baseline `make check`: passed before implementation (backend unit 157, frontend 58).
+- Final post-review-fix `make verify`: passed (backend 273, frontend 62, empty PostgreSQL migration check, production build, 11 general browser tests, event-drafts browser test, and login limiter browser test).
+- New PostgreSQL PATCH integration coverage: 35 cases; edit UI covers prefill/save, explicit slug regeneration, and preserves saved seconds during text-only edit.
+- Browser screenshot: `.verification/event-edit.png` (generated during the `event-drafts` Playwright run).
+- Two earlier `make verify` attempts exposed intermittent failures in existing `auth-refresh.spec.ts`; the later complete run passed without auth code changes.
+- Review follow-up found no Critical or Important remaining. Minor generated typing limitation: optional PATCH fields allow `null` in TypeScript but the API rejects it with 422.

@@ -93,6 +93,69 @@ it.each([['EVENT_NOT_OWNER', 403, 'Нет доступа'], ['EVENT_NOT_FOUND', 
   expect(screen.queryByText(event.description)).not.toBeInTheDocument();
 });
 
+it('prefills and saves an event draft through PATCH, then shows saved values', async () => {
+  const edited = { ...event, title: 'Updated meetup', description: 'Updated plain text' };
+  let patchBody: unknown;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (input === `/api/events/${event.id}` && options?.method === 'PATCH') {
+      patchBody = JSON.parse(String(options.body));
+      expect(new Headers(options.headers).get('X-CSRF-Token')).toBe('test-token');
+      return json(edited);
+    }
+    if (input === `/api/events/${event.id}`) return json(event);
+    throw new Error(`Unexpected request: ${String(input)}`);
+  });
+  fireEvent.click(await screen.findByRole('link', { name: 'Редактировать черновик' }));
+  expect(await screen.findByRole('heading', { name: 'Редактировать мероприятие' })).toBeVisible();
+  expect(screen.getByLabelText(/^Название/)).toHaveValue(event.title);
+  fireEvent.change(screen.getByLabelText(/^Название/), { target: { value: 'Updated meetup' } });
+  fireEvent.change(screen.getByLabelText(/^Описание/), { target: { value: 'Updated plain text' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+  expect(await screen.findByRole('heading', { name: edited.title })).toBeVisible();
+  expect(screen.getByText(edited.description)).toBeVisible();
+  expect(patchBody).toMatchObject({ title: 'Updated meetup', description: 'Updated plain text' });
+  expect(window.location.pathname).toBe(`/organizer/events/${event.id}`);
+});
+
+it('regenerates a draft slug only through the explicit edit action', async () => {
+  const regenerated = { ...event, slug: 'meetup-new-link' };
+  let body: Record<string, unknown> | undefined;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (input === `/api/events/${event.id}` && options?.method === 'PATCH') {
+      body = JSON.parse(String(options.body)) as Record<string, unknown>;
+      return json(regenerated);
+    }
+    return json(event);
+  });
+  fireEvent.click(await screen.findByRole('link', { name: 'Редактировать черновик' }));
+  await screen.findByRole('heading', { name: 'Редактировать мероприятие' });
+  fireEvent.click(screen.getByRole('button', { name: 'Обновить ссылку' }));
+  expect(await screen.findByText('Ссылка события: meetup-new-link')).toBeVisible();
+  expect(body?.regenerate_slug).toBe(true);
+  expect(body?.title).toBe(event.title);
+});
+
+it('preserves saved schedule seconds during a text-only edit', async () => {
+  const precise = { ...event, starts_at: '2026-10-10T13:30:42Z', ends_at: '2026-10-10T15:30:17Z' };
+  const updated = { ...precise, description: 'Changed description' };
+  let body: Record<string, unknown> | undefined;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (input === `/api/events/${event.id}` && options?.method === 'PATCH') {
+      body = JSON.parse(String(options.body)) as Record<string, unknown>;
+      return json(updated);
+    }
+    return json(precise);
+  });
+  fireEvent.click(await screen.findByRole('link', { name: 'Редактировать черновик' }));
+  await screen.findByRole('heading', { name: 'Редактировать мероприятие' });
+  fireEvent.change(screen.getByLabelText(/^Описание/), { target: { value: 'Changed description' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+  expect(await screen.findByRole('heading', { name: precise.title })).toBeVisible();
+  expect(body?.starts_at).toBe(precise.starts_at);
+  expect(body?.ends_at).toBe(precise.ends_at);
+  expect(body?.description).toBe('Changed description');
+});
+
 it.each(['list', 'detail'])('isolates %s cache when another account logs in without reload', async mode => {
   const other = { ...user, id: '00000000-0000-4000-8000-000000000003', email: 'other@example.com' };
   let current = user;
