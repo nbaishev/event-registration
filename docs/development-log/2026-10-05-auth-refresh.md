@@ -116,3 +116,36 @@ Secret scan перед первым commit: 17 staged files, local key/.env/priv
 [PR #5](https://github.com/nbaishev/event-registration/pull/5) → `master`.
 
 GitHub implementation commit: `b178db43176f2d2f2157f6d03bd158bdeef52d6d`; review fix: `b2f1d1f1231a201de437900683d8136206dc6a81`. Их Git trees совпадают с локальными commits `4ce253f` / `3602cca`; опубликованный verified implementation tree: `3e9dd31c0884a83e841f26e33594225beaec6338`. CI запущен; локальный full gate успешен. Финальный commit меняет только status/log, повторное выполнение тестов для этих документов не требовалось.
+
+## PR correction: public requests
+
+Resumed at: `2026-10-05T21:44:10+06:00`
+Finished at: `2026-10-05T21:48:51+06:00`
+
+### Corrective prompt
+
+Исправь замечание `Allow anonymous requests to public API routes`. Не расширяй allowlist публичными URL. Убери предположение, что все `/api/*` требуют авторизации. Требование аутентификации должно задаваться явно для защищённых запросов/маршрутов. Публичные endpoints, включая `/api/health` и `/api/public/events/{slug}`, должны продолжать отправляться при `auth phase === anonymous`. Добавь regression tests для сценария failed refresh → anonymous → public event request succeeds, при этом защищённый request не должен выполняться без авторизации.
+
+### Baseline / scope
+
+PR #5 остаётся текущей задачей: branch `feat/auth-refresh`, worktree чистый, HEAD `0c38d6e`. Отдельная feature task не начинается.
+Command: `cd frontend && corepack pnpm test`. Exit code: `0`. Result: `39 passed (39)`; existing failures отсутствуют.
+Решение: `requiresAuth: true` задаётся явно вызывающим защищённым запросом. По умолчанию запрос публичный; auth phase / generation не ограничивают его transport. URL allowlist публичных endpoints не добавляется.
+Существующие protected tests получают явный признак согласно уточнённому контракту; `/api/auth/me` caller обновляется. Backend/CSRF/JWT не меняются.
+
+### RED
+Timestamp: `2026-10-05T21:44:17+06:00`.
+Command: `cd frontend && corepack pnpm test`. Exit code: `1`. Result: `5 failed | 39 passed (44)`.
+Expected reason: URL-based auth guard блокировал public requests после terminal refresh, запускал recovery для public 401 и отклонял public response при logout generation change.
+
+### GREEN / полный gate
+Timestamp: `2026-10-05T21:47:34+06:00`.
+Command: `make verify` с configured PNPM/Corepack/UV cache и Chromium path.
+Exit code: `0`.
+Result: quick unit `157 passed in 3.01s`; frontend `44 passed (44)`; backend `205 passed in 16.96s`; `OpenAPI drift: none.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; frontend / Docker builds, Compose config и nginx config успешны; browser `11 passed (11.6s)` + limiter `1 passed (2.2s)`; `verify: passed (isolated project foundation-verify-96764b39422a).` Изолированные containers/volumes удалены.
+
+### Результат correction
+
+URL-based предположение о protected `/api/*` удалено полностью. Public calls по умолчанию используют transport без session guard / refresh / generation checks. Protected calls явно задают `requiresAuth: true`; metadata не передаётся в fetch. `/api/auth/me` caller и существующие protected tests обновлены.
+Добавлены regressions failed refresh → anonymous → public event/health/new route succeeds, protected call blocked до fetch; public 401 не запускает recovery; public response завершается при logout. Public events backend не добавлялся: тестируется API client contract в рамках Auth Refresh.
+Исправление подготовлено для обновления существующего [PR #5](https://github.com/nbaishev/event-registration/pull/5). Staged diff проверяется на secrets перед commit; master не меняется.

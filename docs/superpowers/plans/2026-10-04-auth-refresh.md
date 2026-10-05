@@ -38,7 +38,7 @@
 - Missing/tampered/expired/wrong-type refresh, missing User → 401 AUTH_REFRESH_INVALID.
 - Refresh valid до exp, при now==exp invalid; timestamp checks используют Clock.
 - CSRF/Origin failure → 403 CSRF_INVALID без renewal.
-- API client выполняет refresh только на 401 AUTH_REQUIRED защищённого запроса, исключая login/register/refresh/logout.
+- API client выполняет refresh только на 401 AUTH_REQUIRED запроса с явным `requiresAuth: true`. Публичные запросы по умолчанию не зависят от auth phase/generation, включая `/api/health` и `/api/public/events/{slug}`; login/register/refresh/logout не запускают automatic recovery.
 - Параллельные failures используют один refresh Promise; каждый исходный запрос повторяется максимум один раз.
 - Refresh 401 очищает local auth state и переводит на `/login`; network/403/5xx не маскируются как success и не создают повторный refresh loop.
 - Logout блокирует новую recovery, ждёт уже начатую refresh attempt, затем отправляет logout; ответ старой attempt не возвращает authenticated UI. Cookies, установленные in-flight refresh, очищаются последующим logout response.
@@ -73,6 +73,7 @@
 - Consumes: UserResponse, verify_token(expected_type='refresh'), Clock/Settings/Session, Login/Logout cookie helpers.
 - Produces: `refresh_access(session: Session, refresh_token: str, clock: Clock, settings: Settings) -> tuple[User, str]` (User и internal access JWT).
 - Frontend `refreshSession(): Promise<UserResponse>` координирует single-flight, CSRF request и auth generation. `logoutSession(): Promise<void>` блокирует recovery, invalidates prior generation, ждёт settlement текущего refresh и выполняет logout без automatic recovery. Уже начатые запросы старой generation не публикуют session state.
+- API client получает `ApiRequestOptions` с `requiresAuth?: boolean`: защищённые callers, включая `/api/auth/me`, явно ставят `true`; публичные запросы отправляются без session guard/recovery. URL prefix не определяет необходимость auth. Metadata не передаётся в fetch.
 - API client retry сохраняет method/body/header contract; unsafe запрос повторяется только после AUTH_REQUIRED, который backend выдаёт до business mutation. Не повторять запрос при network uncertainty или произвольном 401.
 
 ## Execution steps

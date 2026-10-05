@@ -15,7 +15,7 @@ export function useSession(enabled = true) {
     enabled: enabled && phase === 'active',
     queryFn: async ({ signal }): Promise<CurrentUser | null> => {
       const query = client.getQueryCache().find({ queryKey: sessionKey, exact: true });
-      try { return await apiRequest<CurrentUser>('/api/auth/me', { signal }); }
+      try { return await apiRequest<CurrentUser>('/api/auth/me', { signal, requiresAuth: true }); }
       catch (cause) {
         if (cause instanceof SessionChangedError) {
           void query?.cancel({ revert: true });

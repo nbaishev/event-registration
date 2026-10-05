@@ -77,7 +77,8 @@ Access/refresh — stateless HS256 JWT в host-only HttpOnly SameSite=Lax cookie
 `access_token` (Path `/api/`, 900 seconds), `refresh_token`
 (Path `/api/auth/refresh`, 2592000 seconds). Secure включён в production.
 JWT не возвращаются в JSON и не хранятся в browser storage.
-При 401 `AUTH_REQUIRED` защищённого запроса клиент один раз вызывает
+Защищённые API calls явно задают `requiresAuth: true`; публичные запросы
+не ограничиваются auth phase. При 401 `AUTH_REQUIRED` защищённого запроса клиент один раз вызывает
 `POST /api/auth/refresh`: 200 UserResponse и новый access cookie. Исходный refresh
 не переустанавливается и истекает через 30 дней после входа. Параллельные запросы
 разделяют результат одной refresh attempt, в том числе failed; новый ручной запрос

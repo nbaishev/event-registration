@@ -152,24 +152,29 @@ function loginSession(path: string, options: RequestInit): Promise<UserResponse>
   loginFlight = flight;
   return flight;
 }
-export async function apiRequest<T>(path: string, options: RequestInit): Promise<T> {
+export type ApiRequestOptions = RequestInit & {
+  // Protected callers opt in; public transport is independent of auth state.
+  requiresAuth?: boolean;
+};
+export async function apiRequest<T>(path: string, options: ApiRequestOptions): Promise<T> {
+  const { requiresAuth = false, ...requestOptions } = options;
   const route = path.split('?')[0].replace(/\/+$/, '');
   const method = (options.method ?? 'GET').toUpperCase();
   if (method === 'POST' && route === '/api/auth/logout') return logoutSession() as Promise<T>;
   if (method === 'POST' && route === '/api/auth/refresh') return refreshSession() as Promise<T>;
-  if (method === 'POST' && route === '/api/auth/login') return loginSession(path, options) as Promise<T>;
+  if (method === 'POST' && route === '/api/auth/login') return loginSession(path, requestOptions) as Promise<T>;
+  if (!requiresAuth) return rawRequest<T>(path, requestOptions);
   const expected = generation;
   const originalRenewal = renewal;
   const originalAttempt = refreshAttempts;
   const originalRefresh = refreshFlight;
-  const protectedRoute = route.startsWith('/api/') && !['/api/auth/login', '/api/auth/register', '/api/auth/refresh', '/api/auth/logout', '/api/auth/csrf'].includes(route);
-  if (protectedRoute && phase !== 'active') throw sessionChanged();
+  if (phase !== 'active') throw sessionChanged();
   let result: T;
   try {
-    result = await rawRequest<T>(path, options);
+    result = await rawRequest<T>(path, requestOptions);
   } catch (cause) {
     assertGeneration(expected);
-    if (!protectedRoute || !(cause instanceof ApiError) || cause.status !== 401 || cause.code !== 'AUTH_REQUIRED' || phase !== 'active') throw cause;
+    if (!(cause instanceof ApiError) || cause.status !== 401 || cause.code !== 'AUTH_REQUIRED' || phase !== 'active') throw cause;
     if (originalRenewal === renewal) {
       // A delayed 401 belongs to the attempt already observed by its cohort,
       // including failed attempts. A newly started request can try again.
@@ -178,7 +183,7 @@ export async function apiRequest<T>(path: string, options: RequestInit): Promise
       else await refreshSession();
     }
     assertGeneration(expected);
-    try { result = await rawRequest<T>(path, options); }
+    try { result = await rawRequest<T>(path, requestOptions); }
     catch (retryError) {
       assertGeneration(expected);
       if (retryError instanceof ApiError && retryError.status === 401 && retryError.code === 'AUTH_REQUIRED') loseSession();
