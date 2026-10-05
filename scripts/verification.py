@@ -81,7 +81,15 @@ def verify(mode: str) -> None:
             )
             run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
             run(
-                [*pnpm, "e2e", "--grep-invert", "login limiter"],
+                [*pnpm, "e2e", "--grep-invert", "login limiter|event-drafts"],
+                cwd=ROOT / "frontend",
+                env=environment | {"E2E_BASE_URL": f"http://{address}"},
+            )
+            # Two owner logins need their own rate budget after the auth suite.
+            # Restart only this invocation's unique proxy; production limits stay intact.
+            run([*compose, "restart", "nginx"], env=environment)
+            run(
+                [*pnpm, "e2e", "--grep", "event-drafts"],
                 cwd=ROOT / "frontend",
                 env=environment | {"E2E_BASE_URL": f"http://{address}"},
             )

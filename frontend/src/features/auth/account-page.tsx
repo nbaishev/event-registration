@@ -1,7 +1,7 @@
 import { Alert, Button, Container, Paper, Stack, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { Link as RouterLink, Navigate, useNavigate } from 'react-router';
 import { ApiError, getAuthPhase, logoutSession } from '../../api/client';
 import { useSession } from './session';
 
@@ -42,6 +42,7 @@ export function AccountPage() {
       <Paper variant="outlined" sx={{ p: 4 }}><Stack spacing={3}>
         <Typography component="h1" variant="h4">Мой аккаунт</Typography>
         <Typography>{session.data.email}</Typography>
+        <Button component={RouterLink} to="/organizer/events" variant="outlined">Мои мероприятия</Button>
         {error && <Alert severity="error">{error}</Alert>}
         <Button variant="contained" disabled={pending} onClick={() => { void logout(); }}>{pending ? 'Выходим…' : 'Выйти'}</Button>
       </Stack></Paper>
