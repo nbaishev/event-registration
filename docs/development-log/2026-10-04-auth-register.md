@@ -117,3 +117,7 @@ https://github.com/nbaishev/event-registration/pull/3
 Итоговый `make verify` — код 0: `100 passed in 4.19s` (unit), `116 passed in 4.88s` (полный backend), frontend `6 passed`, E2E `6 passed (3.5s)`; `OpenAPI drift: none.`; `Empty PostgreSQL upgrade, revision head and metadata drift: passed.`; сборки, nginx -t и удаление изолированных ресурсов прошли.
 
 Завершение правки: `2026-10-04T22:37:16+05:00`. APP_ORIGIN сохраняется в браузерной канонической форме; explicit path/query/fragment отклоняются. CSRF comparison и middleware не изменены. Подготовленный diff просмотрен на секреты: только безопасные URL/синтетические token fixtures; .env исключён. Публикация — исправление существующего PR #3.
+
+## Ссылки после нумерации планов
+
+- Текущий файл плана: [02-2026-10-04-auth-register.md](../superpowers/plans/02-2026-10-04-auth-register.md); исходное имя `2026-10-04-auth-register.md` в prompt сохранено дословно.

@@ -149,3 +149,7 @@ Result: quick unit `157 passed in 3.01s`; frontend `44 passed (44)`; backend `20
 URL-based предположение о protected `/api/*` удалено полностью. Public calls по умолчанию используют transport без session guard / refresh / generation checks. Protected calls явно задают `requiresAuth: true`; metadata не передаётся в fetch. `/api/auth/me` caller и существующие protected tests обновлены.
 Добавлены regressions failed refresh → anonymous → public event/health/new route succeeds, protected call blocked до fetch; public 401 не запускает recovery; public response завершается при logout. Public events backend не добавлялся: тестируется API client contract в рамках Auth Refresh.
 Исправление подготовлено для обновления существующего [PR #5](https://github.com/nbaishev/event-registration/pull/5). Staged diff проверяется на secrets перед commit; master не меняется.
+
+## Ссылки после нумерации планов
+
+- Текущий файл плана: [04-2026-10-04-auth-refresh.md](../superpowers/plans/04-2026-10-04-auth-refresh.md); исходное имя `2026-10-04-auth-refresh.md` в prompt сохранено дословно.

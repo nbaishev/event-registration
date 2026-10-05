@@ -2,7 +2,8 @@
 
 Клиент-серверный сервис регистрации на мероприятия. Реализованы Foundation и
 Auth Register/Login/Logout/Refresh: PostgreSQL, Alembic, FastAPI и React UI аккаунта.
-Мероприятия, waitlist, билеты и уведомления пока не реализованы.
+Добавлены создание, список и owner-details черновиков мероприятий.
+Публикация, редактирование, регистрации на мероприятия, waitlist, билеты и уведомления пока не реализованы.
 
 ## Требования
 
@@ -42,7 +43,7 @@ http://localhost:8080/api/docs. Backend запускается ровно с о�
 
 Альтернативный запуск после bootstrap: `docker compose up --build`.
 Backend выполняет `alembic upgrade head` перед запуском сервера; миграция `0001`
-создаёт таблицу `users`. Дополнительная команда `make migrate` для первого запуска не нужна.
+создаёт таблицу `users`, `0002` — `events`. Дополнительная команда `make migrate` для первого запуска не нужна.
 
 Остановка: `make down`. Данные PostgreSQL сохраняются в Compose volume.
 DB port не публикуется в development stack. Если порт 8080 занят, измените
@@ -93,6 +94,41 @@ Nginx ограничивает только точный login route: `10r/m`, `
 client IP. Rejection → 429 `AUTH_RATE_LIMITED` в общем JSON envelope с no-store;
 произвольный X-Forwarded-For не меняет limiter key.
 
+## Черновики мероприятий
+
+После входа откройте «Мои мероприятия» в аккаунте или `/organizer/events`.
+Создайте черновик на `/organizer/events/new`: название 1–200 символов после trim,
+обязательное описание 1–10 000 символов, будущая дата начала, дата окончания после
+начала, IANA timezone и целое положительное количество мест.
+
+Даты вводятся в выбранном часовом поясе; сохраняются в UTC и отображаются в timezone
+события. Несуществующее время при переходе DST отклоняется; для неоднозначного
+времени форма требует явного выбора UTC offset. Название/описание отображаются
+обычным текстом, HTML не интерпретируется.
+
+После сохранения откроется `/organizer/events/:eventId`. Reload сохраняет данные;
+`/organizer/events` показывает только собственные мероприятия, новые первыми.
+Событие создаётся с status DRAFT; редактирование и публикация — следующие задачи.
+Публичная страница по slug пока недоступна.
+
+| Method | Endpoint | Результат |
+|---|---|---|
+| POST | `/api/events` | 201 EventResponse, новый DRAFT |
+| GET | `/api/events/mine` | 200 массив EventSummary, `created_at DESC, id DESC` |
+| GET | `/api/events/{event_id}` | 200 EventResponse, только owner |
+
+Все endpoints требуют access-cookie auth; POST также CSRF и exact Origin.
+Client задаёт `requiresAuth: true`, поэтому существующий refresh flow работает и
+для этих запросов. Неавторизованный запрос → 401 AUTH_REQUIRED; чужой Event →
+403 EVENT_NOT_OWNER; отсутствующий → 404 EVENT_NOT_FOUND; invalid input →
+422 VALIDATION_ERROR. API contracts доступны в `/api/docs` и `/api/openapi.json`.
+Slug генерирует backend с random suffix, уникальность обеспечена PostgreSQL.
+
+[Форма создания](docs/screenshots/event-create.png) · [Сохранённый черновик](docs/screenshots/event-detail.png).
+
+Browser test проверяет create → details reload → mine reload и отказ второму
+аккаунту. Полный gate: `make verify`.
+
 ## Проверки
 
 Для `make e2e` и `make verify` отдельно установите Chromium после bootstrap:
@@ -126,6 +162,7 @@ tracked output; drift завершает gate с ошибкой без пере�
 ## Документы
 
 - [Product spec](docs/superpowers/specs/technical-design.md)
-- [Foundation plan](docs/superpowers/plans/2026-10-04-project-foundation.md)
+- [Foundation plan](docs/superpowers/plans/01-2026-10-04-project-foundation.md)
+- [Event Draft Creation plan](docs/superpowers/plans/05-2026-10-05-event-draft-create.md)
 - [Development lifecycle](docs/development-process.md)
 - [Agent instructions](AGENTS.md)

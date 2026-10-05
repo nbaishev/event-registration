@@ -6,6 +6,10 @@ import { AccountPage } from './features/auth/account-page';
 import { LoginPage } from './features/auth/login-page';
 import { SessionBoundary } from './features/auth/session';
 import { RegisterPage } from './features/auth/register-page';
+import { OrganizerLayout } from './features/events/organizer-layout';
+import { EventCreatePage } from './features/events/event-create-page';
+import { EventListPage } from './features/events/event-list-page';
+import { EventDetailPage } from './features/events/event-detail-page';
 
 export function App({ client }: { client?: QueryClient } = {}) {
   const [queryClient] = useState(() => client ?? new QueryClient());
@@ -18,6 +22,11 @@ export function App({ client }: { client?: QueryClient } = {}) {
           <Route path="/" element={<AccountPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/organizer/events" element={<OrganizerLayout />}>
+            <Route index element={<EventListPage />} />
+            <Route path="new" element={<EventCreatePage />} />
+            <Route path=":eventId" element={<EventDetailPage />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

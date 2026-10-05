@@ -1,4 +1,4 @@
-# Auth Login / Logout Implementation Plan
+# Task 03 — Auth Login / Logout Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
@@ -61,7 +61,7 @@
 
 ## Auth contract (owned by this task)
 
-UserResponse/error envelope/CSRF contract импортируются из [Register plan](2026-10-04-auth-register.md#api-contract-owned-by-this-task).
+UserResponse/error envelope/CSRF contract импортируются из [Register plan](02-2026-10-04-auth-register.md#api-contract-owned-by-this-task).
 
 - `POST /api/auth/login`: `{email:string,password:string}`; 200 UserResponse; 401 AUTH_INVALID_CREDENTIALS; 422 VALIDATION_ERROR; 403 CSRF_INVALID. Email trim/lowercase; request password 12–128 characters, без trim; malformed email/password → 422 с Register validation schema.
 - `GET /api/auth/me`: 200 UserResponse; 401 AUTH_REQUIRED. CSRF не требуется.

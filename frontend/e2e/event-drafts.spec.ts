@@ -1,0 +1,60 @@
+import { randomUUID } from 'node:crypto';
+import { expect, test, type Page } from '@playwright/test';
+async function registerAndLogin(page: Page) {
+  const email = `event-owner-${randomUUID()}@example.com`, password = 'a long password';
+  await page.goto('/register');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Пароль').fill(password);
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Пароль').fill(password);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await expect(page.getByText(email)).toBeVisible();
+}
+test('owner creates a draft, reloads details, sees mine and cannot read another owner event', async ({ page, browser, baseURL }) => {
+  await registerAndLogin(page);
+  await page.getByRole('link', { name: 'Мои мероприятия' }).click();
+  await expect(page.getByText('У вас пока нет мероприятий')).toBeVisible();
+  await page.getByRole('link', { name: 'Создать мероприятие' }).click();
+  await page.screenshot({ path: '../.verification/event-create.png', fullPage: true });
+  await page.getByLabel('Название').fill('  Community meetup  ');
+  await page.getByLabel('Описание').fill('Открытая встреча сообщества. <b>Обычный текст</b>');
+  await page.getByLabel('Часовой пояс IANA').fill('Asia/Almaty');
+  const date = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel(/^Начало/).fill(`${date}T18:30`);
+  await page.getByLabel(/^Окончание/).fill(`${date}T20:30`);
+  await page.getByLabel('Количество мест').fill('0');
+  await page.getByRole('button', { name: 'Создать черновик' }).click();
+  await expect(page.getByRole('alert')).toContainText('Количество мест');
+  await page.getByLabel('Количество мест').fill('25');
+  const created = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/api/events'));
+  await page.getByRole('button', { name: 'Создать черновик' }).click();
+  const response = await created;
+  expect(response.status()).toBe(201);
+  const event = await response.json();
+  expect(event.status).toBe('DRAFT');
+  expect(event.starts_at).toBe(`${date}T13:30:00Z`);
+  expect(event.published_at).toBeNull();
+  await expect(page.getByRole('heading', { name: 'Community meetup' })).toBeVisible();
+  await expect(page.getByText('Черновик', { exact: true })).toBeVisible();
+  await expect(page.getByText('Открытая встреча сообщества. <b>Обычный текст</b>')).toBeVisible();
+  await expect(page.locator('b')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText('Количество мест: 25')).toBeVisible();
+  await page.screenshot({ path: '../.verification/event-detail.png', fullPage: true });
+  await page.getByRole('link', { name: 'Мои мероприятия' }).click();
+  await expect(page.getByRole('link', { name: 'Community meetup' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Community meetup' })).toBeVisible();
+  const other = await browser.newContext({ baseURL });
+  try {
+    const otherPage = await other.newPage();
+    await registerAndLogin(otherPage);
+    await otherPage.goto('/organizer/events');
+    await expect(otherPage.getByText('У вас пока нет мероприятий')).toBeVisible();
+    await otherPage.goto(`/organizer/events/${event.id}`);
+    await expect(otherPage.getByRole('alert')).toContainText('Нет доступа');
+    await expect(otherPage.getByText('Открытая встреча сообщества. <b>Обычный текст</b>')).toHaveCount(0);
+  } finally { await other.close(); }
+});

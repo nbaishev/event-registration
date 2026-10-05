@@ -1,4 +1,4 @@
-# Auth Refresh Implementation Plan
+# Task 04 — Auth Refresh Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
@@ -61,8 +61,8 @@
 ## API contract (owned by this task)
 
 - `POST /api/auth/refresh`: без body; 200 UserResponse; 401 AUTH_REFRESH_INVALID; 403 CSRF_INVALID; no-store.
-- UserResponse и CSRF — [Register contract](2026-10-04-auth-register.md#api-contract-owned-by-this-task).
-- Cookie/claims/algorithm — [Login/Logout contract](2026-10-04-auth-login-logout.md#auth-contract-owned-by-this-task).
+- UserResponse и CSRF — [Register contract](02-2026-10-04-auth-register.md#api-contract-owned-by-this-task).
+- Cookie/claims/algorithm — [Login/Logout contract](03-2026-10-04-auth-login-logout.md#auth-contract-owned-by-this-task).
 - Success устанавливает только `access_token` с исходными attributes. Refresh cookie остаётся с первоначальным сроком. 401 удаляет обе auth cookies с их исходными paths; stateless JWT централизованно не отзывается.
 - Невалидная access cookie не препятствует valid refresh; refresh use-case не зависит от access auth dependency.
 

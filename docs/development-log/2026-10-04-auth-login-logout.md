@@ -122,3 +122,7 @@ Actual result:
 - Все acceptance criteria и полный `make verify` подтверждены. Единственное Important замечание reviewer исправлено; deferred minors отсутствуют.
 - CI автоматически запущен для PR; на эту временную отметку его результат ещё не получен. Статус доступен на странице PR и будет проверен перед итоговым ответом.
 - Root master не изменялся; merge не выполнялся.
+
+## Ссылки после нумерации планов
+
+- Текущий файл плана: [03-2026-10-04-auth-login-logout.md](../superpowers/plans/03-2026-10-04-auth-login-logout.md); исходное имя `2026-10-04-auth-login-logout.md` в prompt сохранено дословно.
