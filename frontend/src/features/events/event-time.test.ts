@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localTimeCandidates, resolveLocalTime } from './event-time';
+import { localTimeCandidates, resolveLocalTime, toLocalDateTimeInput } from './event-time';
 
 describe('event local time conversion', () => {
   it('uses the selected timezone instead of the browser timezone', () => {
@@ -17,6 +17,14 @@ describe('event local time conversion', () => {
     expect(() => resolveLocalTime(local, zone)).toThrow('Выберите');
     expect(resolveLocalTime(local, zone, '2026-11-01T06:30:00.000Z')).toBe('2026-11-01T06:30:00.000Z');
     expect(() => resolveLocalTime(local, zone, '2026-11-02T06:30:00.000Z')).toThrow();
+  });
+  it('prefills an ambiguous local time from its exact saved instant', () => {
+    const instant = '2026-11-01T06:30:00Z', zone = 'America/New_York';
+    const local = toLocalDateTimeInput(instant, zone);
+    expect(local).toBe('2026-11-01T01:30');
+    expect(resolveLocalTime(local, zone, localTimeCandidates(local, zone).find(
+      candidate => Date.parse(candidate) === Date.parse(instant),
+    ))).toBe('2026-11-01T06:30:00.000Z');
   });
   it('rejects invalid dates and IANA zones', () => {
     for (const local of ['', '2026-02-30T12:00', '2026-13-01T12:00', 'not-a-date']) {

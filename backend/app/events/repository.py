@@ -49,3 +49,48 @@ def find_event(session: Session, event_id: UUID) -> Event | None:
         return session.get(Event, event_id)
     except SQLAlchemyError:
         raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+
+
+def find_event_for_update(session: Session, event_id: UUID) -> Event | None:
+    try:
+        return session.scalar(
+            select(Event).where(Event.id == event_id).with_for_update()
+        )
+    except SQLAlchemyError:
+        session.rollback()
+        raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+
+
+def save_event(
+    session: Session,
+    event: Event,
+    updates: dict[str, object],
+    *,
+    retry_slug: bool,
+) -> bool:
+    """Save the locked event; return False only for a retriable slug collision."""
+    try:
+        if retry_slug:
+            with session.begin_nested():
+                for field, value in updates.items():
+                    setattr(event, field, value)
+                session.flush()
+        else:
+            for field, value in updates.items():
+                setattr(event, field, value)
+            session.flush()
+        session.commit()
+        session.refresh(event)
+        return True
+    except IntegrityError as exc:
+        is_slug_collision = (
+            isinstance(exc.orig, UniqueViolation)
+            and exc.orig.diag.constraint_name == "uq_events_slug"
+        )
+        if retry_slug and is_slug_collision:
+            return False
+        session.rollback()
+        raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+    except SQLAlchemyError:
+        session.rollback()
+        raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None

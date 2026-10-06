@@ -1,6 +1,6 @@
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useOutletContext } from 'react-router';
+import { Link as RouterLink, useParams, useOutletContext } from 'react-router';
 import { ApiError } from '../../api/client';
 import { eventKeys, getEvent } from './api';
 import { formatEventTime } from './event-time';
@@ -17,6 +17,7 @@ export function EventDetailPage() {
   const event = query.data;
   return <Paper variant="outlined" sx={{ p: 4 }}><Stack spacing={3}>
     <Typography component="h1" variant="h4">{event.title}</Typography>
+    {event.status === 'DRAFT' && <Button component={RouterLink} to={`/organizer/events/${event.id}/edit`} variant="contained">Редактировать черновик</Button>}
     <Typography>{event.status === 'DRAFT' ? 'Черновик' : event.status === 'CANCELLED' ? 'Отменено' : 'Опубликовано'}</Typography>
     <Typography sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{event.description}</Typography>
     <Typography>Начало: {formatEventTime(event.starts_at, event.timezone)}</Typography>

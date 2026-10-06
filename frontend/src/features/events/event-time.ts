@@ -38,3 +38,13 @@ export function offsetLabel(local: string, instant: string): string {
 export function formatEventTime(instant: string, timezone: string): string {
   return new Intl.DateTimeFormat('ru-RU', { timeZone: timezone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(instant));
 }
+export function toLocalDateTimeInput(instant: string, timezone: string): string {
+  const values: Record<string, string> = {};
+  for (const part of new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(instant))) {
+    if (part.type !== 'literal') values[part.type] = part.value;
+  }
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+}
