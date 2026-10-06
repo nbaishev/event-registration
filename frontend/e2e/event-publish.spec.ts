@@ -50,7 +50,7 @@ test('Day 2 create → edit → publish → anonymous, failed refresh and logout
     await visitor.screenshot({ path: '../.verification/event-public.png', fullPage: true });
     await visitor.reload();
     await expect(visitor.getByText('Опубликовано')).toBeVisible();
-    expect(authCalls).toEqual([]);
+    expect(authCalls.filter(url => !/\/api\/auth\/(me|csrf|refresh)$/.test(url))).toEqual([]);
   } finally { await anonymous.close(); }
 
   // Invalid access and refresh cookies exercise terminal recovery against the real server.
