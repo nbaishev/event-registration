@@ -111,9 +111,16 @@ test('old refresh cannot overwrite cookies after login as another account', asyn
   // Then return to A's account via SPA history so its pending refresh is retained.
   await page.goBack();
   await page.getByRole('link', { name: 'Нет аккаунта? Зарегистрироваться' }).click();
+  // Login and Register share field labels; wait for the destination form before filling.
+  await expect(page.getByRole('heading', { name: 'Создать аккаунт', exact: true })).toBeVisible();
   await page.getByLabel('Email').fill(secondEmail);
   await page.getByLabel('Пароль').fill('a long test password');
+  await expect(page.getByLabel('Email')).toHaveValue(secondEmail);
+  const registered = page.waitForResponse(response => response.request().method() === 'POST' && response.url().endsWith('/api/auth/register'));
   await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+  const registration = await registered;
+  expect(registration.status()).toBe(201);
+  expect((await registration.json() as { email: string }).email).toBe(secondEmail);
   await expect(page).toHaveURL(/\/login$/);
   // A is still authenticated; navigate back to its cached account without reload.
   // Push the account route through the router's popstate listener.
