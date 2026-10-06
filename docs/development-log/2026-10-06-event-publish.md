@@ -1,7 +1,7 @@
 # Task 07 — Event Publishing + Public Page
 
 Started at: `2026-10-06T21:07:08+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-06T21:29:47+06:00`
 
 ## Initial prompt
 
@@ -17,6 +17,8 @@ Plan: `docs/superpowers/plans/07-2026-10-05-event-publish.md`
 - 2026-10-06T21:18:02+06:00 — make verify exit 2: существующий Auth browser test `old refresh cannot overwrite cookies after login as another account` остановился на регистрации второго аккаунта (auth-refresh.spec.ts:117). Snapshot: Email пуст, локальная validation error; остальные 10 Auth/smoke tests прошли. Auth код и этот тест не изменялись. Day 2 group не запускалась; изолированный stack очищен. Повторный запуск проверяет воспроизводимость; причина timing пока гипотеза.
 - 2026-10-06T21:19:56+06:00 — итоговое review нашло Important: delayed detail GET перезаписывает PUBLISHED stale DRAFT. Regression RED: `corepack pnpm exec vitest run src/features/events/event-pages.test.tsx`, exit 1, `1 failed | 26 passed (27)`, expected PUBLISHED / received DRAFT. Fix: await cancelQueries exact saved owner/id перед setQueryData публикации. Других findings нет.
 - 2026-10-06T21:21:09+06:00 — cache-race GREEN: full frontend `76 passed (76)`, exit 0. make check после исправления: unit `157 passed`, frontend `76 passed`, OpenAPI drift none. Повторный изолированный browser gate прошёл: Auth/smoke 11, event lifecycle 2, limiter 1. Регистрационный сбой не повторился; root cause не доказана. Screenshots event-public.png/event-published-owner.png просмотрены: safe plain text, timezone и public link соответствуют plan. Финальный make verify будет выполнен на snapshot с review fix.
+
+- 2026-10-06T21:29:47+06:00 — PR #8 создан; задача завершена, feature branch/worktree сохранены для review. Staged/branch diff проверен: secrets и .env отсутствуют, только synthetic fixtures.
 
 ## Decisions and deviations
 
@@ -108,4 +110,6 @@ Known limitations:
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/8
+
+Open, не merged. Remote implementation commit `092d13b3908b47eb7d6e608fdc2904fd03ebf613`; его tree `86a34be727abef7e0f4a4292cac170e823c2ca4e` совпал с local `7546f01` tree. Различие commit SHA связано с публикацией через GitHub connector; source tree идентичен.

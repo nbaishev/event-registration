@@ -2,7 +2,7 @@
 
 > **For agentic workers:** План утверждён пользователем. Начинать implementation только после отдельной команды пользователя; выполнять через superpowers:executing-plans.
 
-**Status:** Approved by user on 2026-10-05. Implemented on 2026-10-06; final make verify passed; PR preparation.
+**Status:** Approved by user on 2026-10-05. Implemented on 2026-10-06; final make verify passed; [PR #8](https://github.com/nbaishev/event-registration/pull/8) open.
 
 **Goal:** Owner публикует валидный черновик; anonymous visitor открывает событие по slug.
 
