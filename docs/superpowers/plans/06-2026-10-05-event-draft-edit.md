@@ -65,6 +65,13 @@
 
 **Test strategy:** TDD для partial-update validation и временных границ; PostgreSQL integration для atomic rollback и сериализации competing PATCH; RTL prefill/error/save; Playwright edit → reload. Проверяются slug stability/regeneration, text boundaries и DST offset selection. После Task 07 добавляется regression PATCH vs publish.
 
+### Corrective acceptance criteria — 2026-10-06
+
+- Edit form sends only values that differ from its latest loaded/synchronized event snapshot; unchanged fields and `regenerate_slug: false` are omitted.
+- Two tabs editing different fields of the same DRAFT preserve both changes: a PATCH from one tab cannot write stale values for fields it did not change. The endpoint remains a partial update and keeps its existing Event `FOR UPDATE` transaction.
+- If query data refreshes after the form mounts, all fields that the user has not edited synchronize to the incoming event. User-edited (dirty) fields remain untouched. After successful save, the saved response becomes the new clean form baseline.
+- Tests reproduce each case: minimal PATCH body, same-draft two-tab field edits against PostgreSQL, and cached-stale → fresh query data with both untouched and dirty form fields.
+
 **Verification:** Baseline `make check`; targeted unit/integration и component tests; `make api-generate`; `make check`; `make test`; финальный `make verify` перед PR. E2E проверяет сохранение и отсутствие изменений после rejected PATCH; screenshots и staged diff проверяются перед PR.
 
 **Definition of Done:** [AGENTS.md](../../../AGENTS.md) плюс acceptance criteria задачи и проверенное поведение partial PATCH под PostgreSQL lock.
