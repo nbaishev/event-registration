@@ -2,7 +2,7 @@
 
 > **For agentic workers:** План утверждён пользователем. Начинать implementation только после отдельной команды пользователя; выполнять через superpowers:executing-plans.
 
-**Status:** Approved by user on 2026-10-05. Реализация не начата; ожидает отдельной команды пользователя.
+**Status:** Approved by user on 2026-10-05. Implemented on 2026-10-06; final make verify passed; [PR #8](https://github.com/nbaishev/event-registration/pull/8) open.
 
 **Goal:** Owner публикует валидный черновик; anonymous visitor открывает событие по slug.
 
@@ -114,5 +114,17 @@ CANCELLED visibility — утверждённый контракт для пос
 
 - [x] Утвердить решения опроса: `1А, 2Б, 3А, 4А, 5А, 6А, 7А, 8А`.
 - [x] Утвердить Goal, Scope, PR boundary и план задачи: пользователь «Планы утверждаю.»
-- [ ] Перед реализацией конкретизировать технические шаги, schemas и signatures в рамках утверждённого scope. Изменение требований или scope требует отдельного согласования.
-- [ ] Только после разрешения на implementation создать branch/worktree, подтвердить baseline и создать task development log.
+- [x] Перед реализацией конкретизировать технические шаги, schemas и signatures в рамках утверждённого scope. Изменение требований или scope требует отдельного согласования.
+- [x] Только после разрешения на implementation создать branch/worktree, подтвердить baseline и создать task development log.
+
+## Технические шаги реализации
+
+1. Backend TDD: publish_owned_event(session, clock, owner_id, event_id), lock → owner/state/ZoneInfo/interval/capacity/time checks → save. Тimestamps одной Clock.now().
+2. PublicEventResponse содержит id/title/description/slug/starts_at/ends_at/timezone/capacity/status (PUBLISHED/FINISHED/CANCELLED). get_public_event(session, clock, slug) выбирает только PUBLISHED/CANCELLED и вычисляет effective status. Public router без auth dependencies; no-store.
+3. Generated API types; publish mutation обновляет detail и invalidates mine; public query keyed by slug вне OrganizerLayout.
+4. PostgreSQL lifecycle/visibility/races, RTL publish/public/auth regressions, Playwright create→edit→publish→anonymous/reload/failed refresh.
+5. make check/test/verify, screenshots, review, журнал и PR.
+
+## Execution result
+
+Publication/public vertical slice реализован; миграция не требуется. Итоговое review выявило delayed detail GET / publish cache race, исправленную через exact query cancellation с RED→GREEN regression. Финальный make verify: backend286, frontend76, E2E14; migration/build/proxy gates passed. Фактические команды, timestamps и ограничения: [development log](../../development-log/2026-10-06-event-publish.md).

@@ -9,3 +9,8 @@ export const getMyEvents = (signal?: AbortSignal) => apiRequest<EventSummary[]>(
 export const getEvent = (id: string, signal?: AbortSignal) => apiRequest<EventResponse>(`/api/events/${encodeURIComponent(id)}`, { signal, requiresAuth: true });
 export const createEvent = (body: EventCreateRequest) => apiRequest<EventResponse>('/api/events', { method: 'POST', body: JSON.stringify(body), requiresAuth: true });
 export const patchEvent = (id: string, body: EventPatchRequest) => apiRequest<EventResponse>(`/api/events/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body), requiresAuth: true });
+
+export type PublicEventResponse = components['schemas']['PublicEventResponse'];
+export const publishEvent = (id: string) => apiRequest<EventResponse>(`/api/events/${encodeURIComponent(id)}/publish`, { method: 'POST', requiresAuth: true });
+export const publicEventKey = (slug: string) => ['public-events', slug] as const;
+export const getPublicEvent = (slug: string, signal?: AbortSignal) => apiRequest<PublicEventResponse>(`/api/public/events/${encodeURIComponent(slug)}`, { signal });

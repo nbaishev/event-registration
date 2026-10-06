@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -161,3 +161,15 @@ class EventResponse(EventSummary):
     cancelled_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class PublicEventResponse(BaseModel):
+    id: UUID
+    title: str
+    description: str
+    slug: str
+    starts_at: datetime
+    ends_at: datetime
+    timezone: str
+    capacity: int
+    status: Literal["PUBLISHED", "FINISHED", "CANCELLED"]

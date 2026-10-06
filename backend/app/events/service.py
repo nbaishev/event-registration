@@ -2,6 +2,7 @@ import re
 import secrets
 import unicodedata
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
@@ -9,7 +10,11 @@ from app.common.clock import Clock
 from app.common.errors import AppError
 from app.events import repository
 from app.events.models import Event, EventStatus
-from app.events.schemas import EventCreateRequest, EventPatchRequest
+from app.events.schemas import (
+    EventCreateRequest,
+    EventPatchRequest,
+    PublicEventResponse,
+)
 
 
 def generate_slug(title: str) -> str:
@@ -132,3 +137,63 @@ def patch_owned_event(
 
     repository.save_event(session, event, updates, retry_slug=False)
     return event
+
+
+def publish_owned_event(
+    session: Session, clock: Clock, owner_id: UUID, event_id: UUID
+) -> Event:
+    event = repository.find_event_for_update(session, event_id)
+    if event is None:
+        raise AppError(404, "EVENT_NOT_FOUND", "Event not found.")
+    if event.owner_id != owner_id:
+        raise AppError(403, "EVENT_NOT_OWNER", "You do not own this event.")
+    now = clock.now()
+    valid_timezone = True
+    try:
+        ZoneInfo(event.timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        valid_timezone = False
+    if (
+        event.status != EventStatus.DRAFT
+        or event.starts_at <= now
+        or event.ends_at <= event.starts_at
+        or event.capacity < 1
+        or not valid_timezone
+    ):
+        raise AppError(409, "EVENT_NOT_PUBLISHABLE", "Event cannot be published.")
+    repository.save_event(
+        session,
+        event,
+        {
+            "status": EventStatus.PUBLISHED,
+            "published_at": now,
+            "schedule_updated_at": now,
+            "updated_at": now,
+        },
+        retry_slug=False,
+    )
+    return event
+
+
+def get_public_event(session: Session, clock: Clock, slug: str) -> PublicEventResponse:
+    event = repository.find_public_event(session, slug)
+    if event is None:
+        raise AppError(404, "EVENT_NOT_FOUND", "Event not found.")
+    status = (
+        "CANCELLED"
+        if event.status == EventStatus.CANCELLED
+        else "FINISHED"
+        if clock.now() >= event.ends_at
+        else "PUBLISHED"
+    )
+    return PublicEventResponse(
+        id=event.id,
+        title=event.title,
+        description=event.description,
+        slug=event.slug,
+        starts_at=event.starts_at,
+        ends_at=event.ends_at,
+        timezone=event.timezone,
+        capacity=event.capacity,
+        status=status,
+    )

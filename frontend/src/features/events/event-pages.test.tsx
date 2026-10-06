@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { eventKeys } from './api';
@@ -249,4 +249,93 @@ it.each(['list', 'detail'])('isolates %s cache when another account logs in with
   finishRequest!(error(mode === 'list' ? 'SERVICE_UNAVAILABLE' : 'EVENT_NOT_OWNER', mode === 'list' ? 503 : 403));
   await screen.findByRole('alert');
   expect(screen.queryByText(event.title)).not.toBeInTheDocument();
+});
+
+it('publishes a draft with CSRF and exposes its public link without edit actions', async () => {
+  let calls = 0;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (String(input).endsWith('/publish')) {
+      calls++;
+      expect(options?.method).toBe('POST');
+      expect(new Headers(options?.headers).get('X-CSRF-Token')).toBe('test-token');
+      return json({ ...event, status: 'PUBLISHED', published_at: user.created_at });
+    }
+    return json(event);
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Опубликовать' }));
+  expect(await screen.findByRole('link', { name: 'Открыть публичную страницу' })).toHaveAttribute('href', `/events/${event.slug}`);
+  expect(screen.queryByRole('link', { name: 'Редактировать черновик' })).not.toBeInTheDocument();
+  expect(calls).toBe(1);
+});
+
+it('keeps a draft and permits publication retry after rejection', async () => {
+  let attempts = 0;
+  setup(`/organizer/events/${event.id}`, input => String(input).endsWith('/publish') ? ++attempts === 1 ? error('EVENT_NOT_PUBLISHABLE', 409) : json({ ...event, status: 'PUBLISHED' }) : json(event));
+  fireEvent.click(await screen.findByRole('button', { name: 'Опубликовать' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Нельзя опубликовать');
+  fireEvent.click(screen.getByRole('button', { name: 'Опубликовать' }));
+  expect(await screen.findByRole('link', { name: 'Открыть публичную страницу' })).toBeVisible();
+});
+
+it.each([['PUBLISHED', 'Опубликовано'], ['FINISHED', 'Завершено'], ['CANCELLED', 'Отменено']])('loads public %s without auth calls and renders safe text in event timezone', async (status, label) => {
+  setup(`/events/${event.slug}`, () => json({ ...event, status }));
+  expect(await screen.findByRole('heading', { name: event.title })).toBeVisible();
+  expect(screen.getByText(label)).toBeVisible();
+  expect(screen.getByText(event.description)).toBeVisible();
+  expect(screen.getByText(/18:30/)).toBeVisible();
+  expect(document.querySelector('b')).toBeNull();
+  expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([`/api/public/events/${event.slug}`]);
+});
+
+it.each([['EVENT_NOT_FOUND', 404, 'Мероприятие не найдено'], ['SERVICE_UNAVAILABLE', 503, 'Не удалось загрузить мероприятие']])('shows public %s and allows retry', async (code, status, message) => {
+  let attempts = 0;
+  setup(`/events/${event.slug}`, () => ++attempts === 1 ? error(code, status) : json({ ...event, status: 'PUBLISHED' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+  expect(await screen.findByRole('heading', { name: event.title })).toBeVisible();
+});
+
+it.each(['failed refresh', 'logout'])('loads public data in the same document after %s without auth recovery', async phase => {
+  const transport = await import('../../api/client');
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
+    if (input === '/api/auth/csrf') return json({ csrf_token: 'test-token' });
+    if (input === '/api/auth/logout') return new Response(null, { status: 204 });
+    return error(String(input).endsWith('/refresh') ? 'AUTH_REFRESH_INVALID' : 'AUTH_REQUIRED', 401);
+  }));
+  if (phase === 'logout') await transport.logoutSession();
+  else await expect(transport.apiRequest('/api/auth/me', { requiresAuth: true })).rejects.toMatchObject({ code: 'AUTH_REFRESH_INVALID' });
+  setup(`/events/${event.slug}`, () => json({ ...event, status: 'PUBLISHED' }));
+  expect(await screen.findByRole('heading', { name: event.title })).toBeVisible();
+  expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([`/api/public/events/${event.slug}`]);
+});
+
+it('shows public loading while the request is pending', async () => {
+  let resolve!: (value: Response) => void;
+  setup(`/events/${event.slug}`, () => new Promise<Response>(done => { resolve = done; }));
+  expect(screen.getByRole('status')).toHaveTextContent('Загружаем');
+  resolve(json({ ...event, status: 'PUBLISHED' }));
+  expect(await screen.findByRole('heading', { name: event.title })).toBeVisible();
+});
+
+
+it('preserves the published detail when an older background draft GET settles later', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  let reads = 0;
+  let release!: (value: Response) => void;
+  const staleRead = new Promise<Response>(done => { release = done; });
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (String(input).endsWith('/publish') && options?.method === 'POST') return json({ ...event, status: 'PUBLISHED' });
+    return ++reads === 1 ? json(event) : staleRead;
+  }, client);
+  await screen.findByRole('heading', { name: event.title });
+  let refetch!: Promise<void>;
+  act(() => { refetch = client.refetchQueries({ queryKey: eventKeys.detail(user.id, event.id), exact: true }); });
+  await waitFor(() => expect(reads).toBe(2));
+  fireEvent.click(screen.getByRole('button', { name: 'Опубликовать' }));
+  await screen.findByRole('link', { name: 'Открыть публичную страницу' });
+  await act(async () => { release(json(event)); await refetch; });
+  expect(client.getQueryData<{ status: string }>(eventKeys.detail(user.id, event.id))?.status).toBe('PUBLISHED');
+  expect(screen.getByRole('link', { name: 'Открыть публичную страницу' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Опубликовать' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Редактировать черновик' })).not.toBeInTheDocument();
 });
