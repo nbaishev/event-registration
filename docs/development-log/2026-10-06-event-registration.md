@@ -1,7 +1,7 @@
 # Task 08 — Регистрация на мероприятие
 
 Started at: `2026-10-06T22:32:58+06:00`
-Finished at: `2026-10-06T22:54:10+06:00` (локальная реализация и проверки; публикация PR ожидает явного разрешения)
+Finished at: `2026-10-06T22:54:10+06:00` (локальная реализация и проверки; PR опубликован ниже)
 
 ## Initial prompt
 
@@ -31,7 +31,7 @@ Known limitations: отмена, promotion, capacity, check-in, email и SSE о�
 
 ## Pull Request
 
-Not created yet. Публикация заблокирована automatic approval review: требуется явное разрешение на git push в https://github.com/nbaishev/event-registration.git.
+PR #10: https://github.com/nbaishev/event-registration/pull/10
 
 ## Milestone 2026-10-06T22:48:03+06:00
 
@@ -66,3 +66,10 @@ Not created yet. Публикация заблокирована automatic appro
 ## Publication — 2026-10-06T22:54:10+06:00
 
 Автоматическая проверка отклонила команду, содержавшую git push, до исполнения: remote destination не признан явно авторизованным. Код/история не отправлены. Описание PR подготовлено в `docs/development-log/2026-10-06-event-registration-pr.md`. Для публикации требуется разрешение пользователя на указанную GitHub repository.
+
+## Publication completed — 2026-10-06T23:03:47+06:00
+
+Пользователь явно разрешил публикацию: «Разрешаю». `git push` был разрешён sandbox, но завершился exit 128 из-за отсутствия локальных HTTPS credentials. Подключённый GitHub connector подтвердил push permission; проверенные файлы опубликованы через Git data API одним commit `5d6d4a8cd51e17e6d9a9acf6c861a4863b815b3d` в `feat/event-registration` от того же base `e08e0f9`. SHA Git tree `707758814b576e10b5362ed4b30dc647ead8ee5d` совпал с проверенным локальным tree. Это squash публикация локальных трёх commits; код, миграция, tests и screenshots совпадают.
+
+Создан PR #10 в master. Merge не выполнялся. После публикации изменён только development log для добавления этой ссылки; полный gate не повторялся для documentation-only update.
+
