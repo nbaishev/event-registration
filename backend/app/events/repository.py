@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.common.errors import AppError
-from app.events.models import Event
+from app.events.models import Event, EventStatus
 
 
 def insert_event(session: Session, event: Event) -> bool:
@@ -93,4 +93,16 @@ def save_event(
         raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
     except SQLAlchemyError:
         session.rollback()
+        raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+
+
+def find_public_event(session: Session, slug: str) -> Event | None:
+    try:
+        return session.scalar(
+            select(Event).where(
+                Event.slug == slug,
+                Event.status.in_([EventStatus.PUBLISHED, EventStatus.CANCELLED]),
+            )
+        )
+    except SQLAlchemyError:
         raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None

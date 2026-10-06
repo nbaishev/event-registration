@@ -10,6 +10,7 @@ import { OrganizerLayout } from './features/events/organizer-layout';
 import { EventCreatePage } from './features/events/event-create-page';
 import { EventListPage } from './features/events/event-list-page';
 import { EventDetailPage } from './features/events/event-detail-page';
+import { PublicEventPage } from './features/events/public-event-page';
 import { EventEditPage } from './features/events/event-edit-page';
 
 export function App({ client }: { client?: QueryClient } = {}) {
@@ -20,6 +21,7 @@ export function App({ client }: { client?: QueryClient } = {}) {
       <BrowserRouter>
         <SessionBoundary />
         <Routes>
+          <Route path="/events/:slug" element={<PublicEventPage />} />
           <Route path="/" element={<AccountPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

@@ -19,6 +19,7 @@ from app.common.errors import (
 )
 from app.common.readiness import database_is_ready
 from app.db.session import DatabaseSession
+from app.events.router import public_router
 from app.events.router import router as events_router
 
 
@@ -51,6 +52,7 @@ app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.include_router(auth_router)
 app.include_router(events_router)
+app.include_router(public_router)
 
 
 @app.get("/api/health", response_model=HealthResponse)

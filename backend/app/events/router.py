@@ -13,12 +13,15 @@ from app.events.schemas import (
     EventPatchRequest,
     EventResponse,
     EventSummary,
+    PublicEventResponse,
 )
 from app.events.service import (
     create_event,
     get_owned_event,
+    get_public_event,
     list_owned_events,
     patch_owned_event,
+    publish_owned_event,
 )
 
 
@@ -84,3 +87,36 @@ def patch_event(
     return EventResponse.model_validate(
         patch_owned_event(session, clock, user.id, event_id, body)
     )
+
+
+@router.post(
+    "/{event_id}/publish",
+    response_model=EventResponse,
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
+def publish_event(
+    event_id: UUID,
+    user: CurrentUser,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> EventResponse:
+    return EventResponse.model_validate(
+        publish_owned_event(session, clock, user.id, event_id)
+    )
+
+
+public_router = APIRouter(
+    prefix="/api/public/events",
+    tags=["public events"],
+    dependencies=[Depends(private_response)],
+    responses={404: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+)
+
+
+@public_router.get("/{slug}", response_model=PublicEventResponse)
+def public_detail(
+    slug: str,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> PublicEventResponse:
+    return get_public_event(session, clock, slug)
