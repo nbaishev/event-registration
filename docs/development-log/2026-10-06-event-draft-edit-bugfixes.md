@@ -1,7 +1,7 @@
 # Исправления редактирования DRAFT Event
 
 Started at: `2026-10-06T20:42:35+06:00`
-Finished at: `2026-10-06T20:53:28+06:00`
+Finished at: `2026-10-06T20:57:34+06:00`
 
 ## Initial prompt
 
@@ -28,6 +28,7 @@ Execution prompt:
 - 2026-10-06T20:49+06:00 — `make check`: exit 0; backend unit 157, frontend 65, lint/typecheck и OpenAPI drift прошли.
 - 2026-10-06T20:53:28+06:00 — полный `make verify`: exit 0; backend integration 273, frontend 65, миграции, локальная и Docker production build, Compose/Nginx smoke, 11 general E2E, event-drafts E2E 1 и login limiter E2E 1 прошли.
 - 2026-10-06T20:53:28+06:00 — read-only code review не обнаружил Critical/Important замечаний; diff check прошёл.
+- 2026-10-06T20:57:34+06:00 — staged secret scan прошёл; фиксы опубликованы в существующий PR #7 отдельными commits. PR остаётся открытым, merge не выполнялся.
 
 ## Decisions and deviations
 
@@ -96,4 +97,4 @@ Known limitations:
 
 ## Pull Request
 
-Продолжение существующего [PR #7](https://github.com/nbaishev/event-registration/pull/7); текущие bugfix изменения пока не опубликованы.
+Обновлён существующий [PR #7](https://github.com/nbaishev/event-registration/pull/7); открыт для review, не слит.
