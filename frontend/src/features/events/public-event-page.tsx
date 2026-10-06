@@ -4,6 +4,7 @@ import { useParams } from 'react-router';
 import { ApiError } from '../../api/client';
 import { getPublicEvent, publicEventKey } from './api';
 import { formatEventTime } from './event-time';
+import { EventRegistrationPanel } from '../registrations/event-registration-panel';
 
 export function PublicEventPage() {
   const { slug = '' } = useParams();
@@ -22,5 +23,6 @@ export function PublicEventPage() {
     <Typography>Окончание: {formatEventTime(event.ends_at, event.timezone)}</Typography>
     <Typography>Часовой пояс: {event.timezone}</Typography>
     <Typography>Количество мест: {event.capacity}</Typography>
+    <EventRegistrationPanel event={event} />
   </Stack></Paper></Container>;
 }

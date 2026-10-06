@@ -35,7 +35,7 @@ export function SessionBoundary() {
   useEffect(() => subscribeSessionLoss(() => {
     void client.cancelQueries();
     client.clear();
-    navigate('/login', { replace: true });
+    if (!/^\/events\/[^/]+\/?$/.test(window.location.pathname)) navigate('/login', { replace: true });
   }), [client, navigate]);
   return null;
 }

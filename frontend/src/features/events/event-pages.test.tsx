@@ -277,14 +277,14 @@ it('keeps a draft and permits publication retry after rejection', async () => {
   expect(await screen.findByRole('link', { name: 'Открыть публичную страницу' })).toBeVisible();
 });
 
-it.each([['PUBLISHED', 'Опубликовано'], ['FINISHED', 'Завершено'], ['CANCELLED', 'Отменено']])('loads public %s without auth calls and renders safe text in event timezone', async (status, label) => {
+it.each([['PUBLISHED', 'Опубликовано'], ['FINISHED', 'Завершено'], ['CANCELLED', 'Отменено']])('loads public %s independently of participant controls and renders safe text in event timezone', async (status, label) => {
   setup(`/events/${event.slug}`, () => json({ ...event, status }));
   expect(await screen.findByRole('heading', { name: event.title })).toBeVisible();
   expect(screen.getByText(label)).toBeVisible();
   expect(screen.getByText(event.description)).toBeVisible();
   expect(screen.getByText(/18:30/)).toBeVisible();
   expect(document.querySelector('b')).toBeNull();
-  expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([`/api/public/events/${event.slug}`]);
+  expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toContain(`/api/public/events/${event.slug}`);
 });
 
 it.each([['EVENT_NOT_FOUND', 404, 'Мероприятие не найдено'], ['SERVICE_UNAVAILABLE', 503, 'Не удалось загрузить мероприятие']])('shows public %s and allows retry', async (code, status, message) => {

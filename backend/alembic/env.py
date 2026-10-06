@@ -5,6 +5,7 @@ from app.auth.models import User  # noqa: F401
 from app.common.config import get_settings
 from app.db.base import Base
 from app.events.models import Event  # noqa: F401
+from app.registrations.models import Registration  # noqa: F401
 
 
 def run_migrations() -> None:
