@@ -1,7 +1,7 @@
 # Auth refresh E2E — registration navigation race
 
 Started at: `2026-10-06T21:50:20+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-06T22:02:49+06:00`
 
 ## Initial prompt
 
@@ -42,7 +42,9 @@ Known limitations: новых нет. Полученные diagnostic artifacts 
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/9
+
+Open, не merged. Source tree опубликован через GitHub connector; remote tree совпал с local631058e.
 
 ## Diagnosis evidence
 
@@ -69,6 +71,8 @@ Result: backend `157 passed in 5.90s`, frontend `65 passed (65)`, lint/typecheck
 
 Command: `UV_CACHE_DIR=/tmp/uv-cache-auth-refresh-e2e make verify`
 Exit code: `0`
-Result: backend `273 passed in 38.58s`, frontend `65 passed (65)`; migrations/schema drift, frontend/Docker builds, nginx passed. Auth/smoke, event draft и login limiter browser groups passed; полный набор13 tests. Изолированные ресурсы удалены.
+Result: backend `273 passed in 38.58s`, frontend `65 passed (65)`; migrations/schema drift, frontend/Docker builds, nginx passed. Auth/smoke `11 passed (10.1s)`, event draft `1 passed (5.9s)`, login limiter `1 passed (1.7s)`; полный набор13 tests. Изолированные ресурсы удалены.
 
 - 2026-10-06T22:00:35+06:00 — final gate passed; подготовка PR. Review no Critical/Important; единственное замечание к номеру diagnostic attempt исправлено. Diff secrets scan перед commit/PR; .env не добавляется.
+
+- 2026-10-06T22:02:49+06:00 — PR #9 создан, журнал завершён. Branch/worktree сохранены для review; staged diff secrets scan clean, .env отсутствует.
