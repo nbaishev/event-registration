@@ -66,6 +66,9 @@ business behavior
 
 # 4. Шаблон задачи
 
+Постановка implementation task должна указывать точный путь к approved implementation
+plan. Используй этот файл вместо поиска актуального плана по всей директории.
+
 Каждый implementation plan должен содержать:
 
 ```text
@@ -77,6 +80,9 @@ Goal:
 
 Dependencies:
 [что должно быть уже реализовано]
+
+Required context:
+[точные пути файлов и sections spec/ADR/engineering rules, необходимые для задачи]
 
 Scope:
 [что входит]

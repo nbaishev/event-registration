@@ -2,12 +2,27 @@
 
 ## Required reading
 
-Перед любой implementation task прочитай:
+Перед implementation task прочитай:
 
-1. `docs/superpowers/specs/` — утверждённые требования продукта;
-2. `docs/superpowers/plans/<current-task>.md` — утверждённый plan задачи;
-3. `docs/agent-rules/engineering.md` — технические правила реализации;
-4. `docs/agent-rules/development-log.md` — правила журнала разработки.
+1. текущий approved implementation plan;
+2. только spec/ADR sections, на которые прямо ссылается plan;
+3. только релевантные sections `docs/agent-rules/engineering.md`.
+
+Не сканируй целиком `docs/superpowers/specs/`, `docs/adr/`,
+предыдущие development logs или весь repository без конкретной необходимости.
+
+Если plan уже содержит достаточный contract задачи, используй его как основной
+execution context и обращайся к Product Spec только для разрешения неоднозначности.
+
+В рамках задачи не перечитывай уже прочитанные документы, пока они не изменились
+или не возникла конкретная неоднозначность. При необходимости читай только нужный раздел.
+
+Для консультаций и review без изменения файлов не запускай implementation workflow:
+baseline tests, создание worktree и development log не требуются.
+
+Правила вывода команд и повторных проверок находятся в
+`docs/agent-rules/engineering.md`, формат журнала — в
+`docs/agent-rules/development-log.md`.
 
 Процесс постановки задач, worktree и PR описан в:
 
@@ -70,6 +85,17 @@ make verify
 ```
 
 запускается **перед готовностью задачи к Pull Request**, а не после каждого изменения.
+
+---
+
+## Context disciplin
+- не читать весь spec/repository без необходимости;
+- не перечитывать неизменившиеся файлы;
+- большие существующие файлы менять patch/edit, а не переписывать целиком;
+- reviewer сам читает git diff, не передавать ему весь source tree;
+- successful logs → только summary;
+- speculative edge cases вне acceptance criteria → follow-up, а не автоматическая реализация;
+- make verify не запускать во время обычного development loop.
 
 ---
 
