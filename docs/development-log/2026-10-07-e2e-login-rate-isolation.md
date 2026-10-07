@@ -1,7 +1,7 @@
 # CI E2E — изоляция login limiter
 
 Started at: `2026-10-07T22:40:50+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-07T22:18:03+05:00`
 
 ## Initial prompt
 
@@ -109,7 +109,7 @@ Result: `production-mode: rejected before restart, container StartedAt unchanged
 
 ## Result
 
-Финальные review/make verify в работе.
+Исправление проверено полным make verify в CI и включено в PR #14. Production limiter сохранён; test isolation работает только на выделенном test Nginx. Ограничение: workers=1, как в текущем CI.
 
 ### Original CI reproduction
 
@@ -129,3 +129,13 @@ Command: `UV_CACHE_DIR=/tmp/task12-uv-cache make verify`
 Exit code: `2`
 Result: unit/frontend/integration suites, migrations and frontend production build passed; Docker backend build failed resolving unchanged `ghcr.io/astral-sh/uv:0.12.5` metadata.
 Actual reason: Docker Desktop `connectex` timeout to `ghcr.io:443`, direct connection without HTTPS proxy. No E2E failure in this invocation: browser step had not started. Registry connectivity checked separately before retrying full gate; no production/rate-limit changes for this infrastructure failure.
+
+### Final CI verification
+
+Command: `make verify`
+Run: https://github.com/nbaishev/event-registration/actions/runs/37657279549
+Verified code commit: `ee703db9af950f95f194eccf560122305c0c81ba`.
+Exit/conclusion: `0 / success`.
+Result: 421 backend, 128 frontend, migrations/drift, production/Docker builds, Nginx/same-origin checks; requested exact grep-invert group `12 passed (17.5s)` followed by remaining group `7 passed (19.1s)` (19 total). Original auth-session passed in the original CI order. Both limiter tests passed, preserving strict 6×401/14×429 assertions. Task 12 deletion scenario preserved.
+Local full verify remains blocked by Docker Desktop registry timeout; successful full CI gate ran the combined Task 12 + limiter fix tree.
+Final documentation-only update does not change the verified implementation. Staged diff checked for secrets; no credentials added.
