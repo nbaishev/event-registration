@@ -60,7 +60,13 @@ test('Day 1 register → login → me → expired-access refresh → logout', as
   await expectAuthCookiesCleared(page.context());
 });
 test('expired refresh clears auth cookies and returns to login without a recovery loop', async ({ page }) => {
+  // Cached login data can render before the initial session request finishes.
+  // Settle that successful request before expiring cookies and testing reload.
+  const initialSession = page.waitForResponse(response => response.url().endsWith('/api/auth/me'));
   const user = await registerAndLogin(page);
+  const initialResponse = await initialSession;
+  expect(initialResponse.status()).toBe(200);
+  expect(await initialResponse.finished()).toBeNull();
   await expireCookie(page.context(), user.id, 'access');
   await expireCookie(page.context(), user.id, 'refresh');
   let refreshes = 0;

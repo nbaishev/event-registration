@@ -309,6 +309,13 @@ def test_increase_vs_cancel_or_register(auth_client, auth_database, competitor):
 
     if competitor == "register":
         with auth_database.begin() as conn:
+            # The existing waiter must precede re-registration regardless of UUIDs.
+            conn.execute(
+                text(
+                    "UPDATE registrations SET waitlisted_at = :earlier WHERE id = :id"
+                ),
+                {"earlier": NOW - timedelta(seconds=1), "id": rows[1]["id"]},
+            )
             conn.execute(
                 text("DELETE FROM registrations WHERE id = :id"), {"id": rows[2]["id"]}
             )

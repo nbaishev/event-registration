@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { ApiError, getAuthPhase } from '../../api/client';
 import { useSession } from '../auth/session';
 import type { PublicEventResponse } from '../events/api';
-import { cancelRegistration, getMyRegistration, registerForEvent, registrationKeys } from './api';
+import { applyRegistrationMutation, cancelRegistration, getMyRegistration, registerForEvent, registrationKeys } from './api';
 
 export function EventRegistrationPanel({ event }: { event: PublicEventResponse }) {
   const session = useSession();
@@ -15,8 +15,7 @@ export function EventRegistrationPanel({ event }: { event: PublicEventResponse }
   const mutation = useMutation({
     mutationFn: () => registerForEvent(event.id), retry: false,
     onSuccess: async response => {
-      await client.cancelQueries({ queryKey: key, exact: true });
-      client.setQueryData(key, response);
+      await applyRegistrationMutation(client, user!.id, response);
     },
     onError: async cause => {
       if (cause instanceof ApiError && cause.code === 'ALREADY_REGISTERED') await own.refetch();
@@ -25,8 +24,7 @@ export function EventRegistrationPanel({ event }: { event: PublicEventResponse }
   const cancellation = useMutation({
     mutationFn: () => cancelRegistration(event.id), retry: false,
     onSuccess: async response => {
-      await client.cancelQueries({ queryKey: key, exact: true });
-      client.setQueryData(key, response);
+      await applyRegistrationMutation(client, user!.id, response);
       mutation.reset();
     },
     onError: async cause => {

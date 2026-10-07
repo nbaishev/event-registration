@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,3 +18,18 @@ class RegistrationResponse(BaseModel):
     waitlist_position: int | None
     ticket_code: str | None
     checked_in_at: datetime | None
+
+
+class RegistrationEventSummary(BaseModel):
+    id: UUID
+    title: str
+    slug: str
+    starts_at: datetime
+    ends_at: datetime
+    timezone: str
+    status: Literal["PUBLISHED", "FINISHED", "CANCELLED"]
+
+
+class MyRegistrationResponse(BaseModel):
+    registration: RegistrationResponse
+    event: RegistrationEventSummary

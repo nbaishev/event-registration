@@ -1,3 +1,4 @@
+import { MyRegistrationsPage } from './features/registrations/my-registrations-page';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -22,6 +23,7 @@ export function App({ client }: { client?: QueryClient } = {}) {
         <SessionBoundary />
         <Routes>
           <Route path="/events/:slug" element={<PublicEventPage />} />
+          <Route path="/me/registrations" element={<MyRegistrationsPage />} />
           <Route path="/" element={<AccountPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

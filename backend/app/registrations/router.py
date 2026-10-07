@@ -7,7 +7,8 @@ from app.common.clock import Clock, get_clock
 from app.common.errors import ErrorResponse
 from app.db.session import DatabaseSession
 from app.events.router import CurrentUser, private_response
-from app.registrations.schemas import RegistrationResponse
+from app.registrations.read_service import list_my_registrations
+from app.registrations.schemas import MyRegistrationResponse, RegistrationResponse
 from app.registrations.service import (
     cancel_registration,
     get_my_registration,
@@ -51,3 +52,20 @@ def cancel(
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> RegistrationResponse:
     return cancel_registration(session, clock, user.id, event_id)
+
+
+me_router = APIRouter(
+    prefix="/api/me",
+    tags=["registrations"],
+    dependencies=[Depends(private_response)],
+    responses={code: {"model": ErrorResponse} for code in (401, 403, 503)},
+)
+
+
+@me_router.get("/registrations", response_model=list[MyRegistrationResponse])
+def mine(
+    user: CurrentUser,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> list[MyRegistrationResponse]:
+    return list_my_registrations(session, clock, user.id)

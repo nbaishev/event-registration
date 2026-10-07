@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Использовать superpowers:executing-plans. Начинать implementation только по отдельной команде пользователя.
 
-**Status:** Scope, CANCELLED history и ordering утверждены в чате 2026-10-06; implementation не начата.
+**Status:** Реализован 2026-10-07; независимый review без замечаний, make verify exit 0.
 
 **Task:** Список регистраций текущего участника.
 
@@ -75,10 +75,10 @@
 
 ## Execution steps
 
-- [ ] 1. После implementation команды/merge 09 создать branch/worktree, baseline, log до кода.
-- [ ] 2. Написать integration tests таблицы Review Focus и API auth/empty cases; `make test` → RED (новый GET отсутствует), записать причину.
-- [ ] 3. Реализовать DTO, SQL own read/position snapshot и router до GREEN `make test`; commit backend/tests.
-- [ ] 4. Выполнить `make api-generate`; добавить RTL list states, account switch, cancellation/cache tests. `cd frontend && corepack pnpm exec vitest run src/features/registrations/my-registrations-page.test.tsx` → RED.
-- [ ] 5. Реализовать page/auth gating/route/account link и reusable mutation synchronization; повторить RTL до GREEN; также выполнить `cd frontend && corepack pnpm exec vitest run src/features/registrations/event-registration-panel.test.tsx src/features/auth/account-page.test.tsx`; commit frontend/generated types.
-- [ ] 6. Playwright `my-registrations`: own direct route/reload, cancel/reload, promotion refetch, login другим user без старых rows; setup ждёт целевой heading, test login rate budget изолирован при необходимости.
-- [ ] 7. Review, `make check`, финальный `make verify`, screenshot, journal evidence и staged secrets check; один PR.
+- [x] 1. После implementation команды/merge 09 создать branch/worktree, baseline, log до кода.
+- [x] 2. Написать integration tests таблицы Review Focus и API auth/empty cases; `make test` → RED (новый GET отсутствует), записать причину.
+- [x] 3. Реализовать DTO, SQL own read/position snapshot и router до GREEN `make test`; commit backend/tests.
+- [x] 4. Выполнить `make api-generate`; добавить RTL list states, account switch, cancellation/cache tests. `cd frontend && corepack pnpm exec vitest run src/features/registrations/my-registrations-page.test.tsx` → RED.
+- [x] 5. Реализовать page/auth gating/route/account link и reusable mutation synchronization; повторить RTL до GREEN; также выполнить `cd frontend && corepack pnpm exec vitest run src/features/registrations/event-registration-panel.test.tsx src/features/auth/account-page.test.tsx`; commit frontend/generated types.
+- [x] 6. Playwright `my-registrations`: own direct route/reload, cancel/reload, promotion refetch, login другим user без старых rows; setup ждёт целевой heading, test login rate budget изолирован при необходимости.
+- [x] 7. Review, `make check`, финальный `make verify`, screenshot, journal evidence и staged secrets check; один PR.
