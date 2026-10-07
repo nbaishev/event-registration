@@ -85,7 +85,7 @@ def verify(mode: str) -> None:
                     *pnpm,
                     "e2e",
                     "--grep-invert",
-                    "login limiter|event-drafts|event-publish|event-registration",
+                    "login limiter|event-drafts|event-publish|event-registration|my-registrations",
                 ],
                 cwd=ROOT / "frontend",
                 env=environment | {"E2E_BASE_URL": f"http://{address}"},
@@ -102,6 +102,13 @@ def verify(mode: str) -> None:
             run([*compose, "restart", "nginx"], env=environment)
             run(
                 [*pnpm, "e2e", "--grep", "event-registration"],
+                cwd=ROOT / "frontend",
+                env=environment | {"E2E_BASE_URL": f"http://{address}"},
+            )
+            # Participant list/account switch has its own login rate budget.
+            run([*compose, "restart", "nginx"], env=environment)
+            run(
+                [*pnpm, "e2e", "--grep", "my-registrations"],
                 cwd=ROOT / "frontend",
                 env=environment | {"E2E_BASE_URL": f"http://{address}"},
             )

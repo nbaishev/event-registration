@@ -185,3 +185,7 @@ it('keeps the cached account and exposes retry when logout fails after refresh s
   fireEvent.click(screen.getByRole('button', { name: 'Выйти' }));
   expect(await screen.findByRole('heading', { name: 'Войти' })).toBeVisible(); expect(logouts).toBe(2);
 });
+it('opens own registrations from the account', async () => {
+  setup('/');
+  expect(await screen.findByRole('link', { name: 'Мои регистрации' })).toHaveAttribute('href', '/me/registrations');
+});

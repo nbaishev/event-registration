@@ -1,8 +1,10 @@
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.events.models import Event, EventStatus
 from app.registrations.models import Registration, RegistrationStatus
 from app.registrations.schemas import RegistrationResponse
 from app.registrations.tickets import format_ticket_code
@@ -85,3 +87,46 @@ def find_waitlist_for_update(
             .with_for_update()
         )
     )
+
+
+def read_my_snapshots(session: Session, user_id: UUID) -> list[dict[str, Any]]:
+    queue = (
+        select(
+            Registration.id,
+            func.row_number()
+            .over(
+                partition_by=Registration.event_id,
+                order_by=(Registration.waitlisted_at, Registration.id),
+            )
+            .label("position"),
+        )
+        .where(Registration.status == RegistrationStatus.WAITLIST)
+        .subquery()
+    )
+    fields = [
+        getattr(Registration, name)
+        for name in RegistrationResponse.model_fields
+        if name != "waitlist_position"
+    ]
+    event_fields = [
+        getattr(Event, name).label("summary_" + name)
+        for name in (
+            "id",
+            "title",
+            "slug",
+            "starts_at",
+            "ends_at",
+            "timezone",
+            "status",
+        )
+    ]
+    return [
+        dict(row)
+        for row in session.execute(
+            select(*fields, queue.c.position.label("waitlist_position"), *event_fields)
+            .join(Event, Event.id == Registration.event_id)
+            .outerjoin(queue, Registration.id == queue.c.id)
+            .where(Registration.user_id == user_id, Event.status != EventStatus.DRAFT)
+            .order_by(Registration.updated_at.desc(), Registration.id.desc())
+        ).mappings()
+    ]

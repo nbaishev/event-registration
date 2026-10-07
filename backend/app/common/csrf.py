@@ -50,6 +50,9 @@ class AuthSecurityMiddleware(BaseHTTPMiddleware):
             and request.url.path.startswith("/api/events/")
             and request.url.path.rstrip("/").endswith("/registration")
         )
-        if request.url.path.startswith("/api/auth/") or cancellation_request:
+        if (
+            request.url.path.startswith(("/api/auth/", "/api/me/"))
+            or cancellation_request
+        ):
             response.headers["Cache-Control"] = "no-store"
         return response
