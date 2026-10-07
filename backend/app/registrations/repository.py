@@ -68,3 +68,20 @@ def read_snapshot(
     if values["ticket_code"] is not None:
         values["ticket_code"] = format_ticket_code(values["ticket_code"])
     return RegistrationResponse.model_validate(values)
+
+
+def find_waitlist_for_update(
+    session: Session, event_id: UUID, limit: int
+) -> list[Registration]:
+    return list(
+        session.scalars(
+            select(Registration)
+            .where(
+                Registration.event_id == event_id,
+                Registration.status == RegistrationStatus.WAITLIST,
+            )
+            .order_by(Registration.waitlisted_at.asc(), Registration.id.asc())
+            .limit(limit)
+            .with_for_update()
+        )
+    )

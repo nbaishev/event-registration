@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Использовать superpowers:executing-plans. Начинать checklist только по отдельной implementation команде пользователя.
 
-**Status:** Декомпозиция и scope утверждены в чате 2026-10-06; implementation не начата.
+**Status:** Implementation выполнена; make verify exit 0 на 2026-10-07; [PR #11](https://github.com/nbaishev/event-registration/pull/11) создан.
 
 **Task:** Отмена регистрации с атомарным FIFO promotion.
 
@@ -82,12 +82,12 @@
 
 ## Execution steps
 
-- [ ] 1. После implementation команды и merge 08 создать branch/worktree, baseline `make check`/`make test`, task log до кода.
-- [ ] 2. Добавить unit tests cancellation state и promotion guards с Fixed Clock; запустить `uv run --frozen --project backend pytest backend/tests/unit/test_registration_cancel.py -q`, подтвердить RED.
-- [ ] 3. Реализовать cancellation/promotion interfaces; повторить unit command до GREEN.
-- [ ] 4. Добавить PostgreSQL tests Review Focus/API error matrix и тест failures после первого promotion; выполнить `make test`, записать RED для отсутствующей гарантии.
-- [ ] 5. Реализовать repository selection/flush и DELETE router до GREEN `make test`; commit backend cancellation/FIFO с tests.
-- [ ] 6. Выполнить `make api-generate`; добавить RTL cancellation success, errors, repeated DELETE, delayed GET, re-registration. Запустить `cd frontend && corepack pnpm exec vitest run src/features/registrations/event-registration-panel.test.tsx`, подтвердить RED.
-- [ ] 7. Добавить cancel action и exact-query cancellation/cache update; повторить RTL до GREEN; commit UI/generated contract.
-- [ ] 8. Расширить `event-registration` Playwright: A CONFIRMED, B WAITLIST, A cancel, B reload CONFIRMED; A re-register WAITLIST; B cancel, A reload CONFIRMED с новым ticket.
-- [ ] 9. Review, `make check`, финальный `make verify`, screenshots, actual verification в журнале и staged secrets check; один PR.
+- [x] 1. После implementation команды и merge 08 создать branch/worktree, baseline `make check`/`make test`, task log до кода.
+- [x] 2. Добавить unit tests cancellation state и promotion guards с Fixed Clock; запустить `uv run --frozen --project backend pytest backend/tests/unit/test_registration_cancel.py -q`, подтвердить RED.
+- [x] 3. Реализовать cancellation/promotion interfaces; повторить unit command до GREEN.
+- [x] 4. Добавить PostgreSQL tests Review Focus/API error matrix и тест failures после первого promotion; выполнить `make test`, записать RED для отсутствующей гарантии.
+- [x] 5. Реализовать repository selection/flush и DELETE router до GREEN `make test`; commit backend cancellation/FIFO с tests.
+- [x] 6. Выполнить `make api-generate`; добавить RTL cancellation success, errors, repeated DELETE, delayed GET, re-registration. Запустить `cd frontend && corepack pnpm exec vitest run src/features/registrations/event-registration-panel.test.tsx`, подтвердить RED.
+- [x] 7. Добавить cancel action и exact-query cancellation/cache update; повторить RTL до GREEN; commit UI/generated contract.
+- [x] 8. Расширить `event-registration` Playwright: A CONFIRMED, B WAITLIST, A cancel, B reload CONFIRMED; A re-register WAITLIST; B cancel, A reload CONFIRMED с новым ticket.
+- [x] 9. Review, `make check`, финальный `make verify`, screenshots, actual verification в журнале и staged secrets check; один PR.

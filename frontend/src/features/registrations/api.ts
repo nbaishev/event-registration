@@ -10,3 +10,5 @@ export async function getMyRegistration(eventId: string, signal?: AbortSignal): 
     throw cause;
   }
 }
+
+export const cancelRegistration = (eventId: string) => apiRequest<RegistrationResponse>(`/api/events/${encodeURIComponent(eventId)}/registration`, { method: 'DELETE', requiresAuth: true });

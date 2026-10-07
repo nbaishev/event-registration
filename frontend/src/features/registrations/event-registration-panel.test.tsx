@@ -92,3 +92,51 @@ it('does not automatically retry uncertain registration failures', async () => {
   expect(await screen.findByText(/Не удалось зарегистрироваться/)).toBeVisible();
   expect(posts).toBe(1);
 });
+const cancelled = { ...confirmed, status: 'CANCELLED', confirmed_at: null, cancelled_at: user.created_at, ticket_code: null };
+it('cancel success survives delayed GET and allows re-registration', async () => {
+  let resolve!: (value: Response) => void;
+  let reads = 0;
+  const delayed = new Promise<Response>(r => { resolve = r; });
+  const client = setup((input, options) => {
+    if (options?.method === 'DELETE') { expect(String(input)).toBe(`/api/events/${event.id}/registration`); return json(cancelled); }
+    if (options?.method === 'POST') return json({ ...confirmed, ticket_code: '2345-6789-ABCD' }, 201);
+    if (String(input).endsWith('/my-registration')) return ++reads === 1 ? json(confirmed) : delayed;
+    throw new Error('unexpected');
+  });
+  await screen.findByText(confirmed.ticket_code);
+  void client.invalidateQueries({ queryKey: ['registrations', user.id, 'detail', event.id] });
+  await waitFor(() => expect(reads).toBe(2));
+  fireEvent.click(screen.getByRole('button', { name: 'Отменить регистрацию' }));
+  expect(await screen.findByText('Регистрация отменена')).toBeVisible();
+  await act(async () => resolve(json(confirmed)));
+  expect(screen.queryByText(confirmed.ticket_code)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Зарегистрироваться' }));
+  expect(await screen.findByText('2345-6789-ABCD')).toBeVisible();
+});
+it('cancels a waitlist registration', async () => {
+  setup((_input, options) => json(options?.method === 'DELETE' ? cancelled : { ...confirmed, status: 'WAITLIST', confirmed_at: null, waitlisted_at: user.created_at, ticket_code: null, waitlist_position: 1 }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Отменить регистрацию' }));
+  expect(await screen.findByText('Регистрация отменена')).toBeVisible();
+  expect(screen.queryByText('Место в очереди: 1')).toBeNull();
+});
+for (const [code, message] of [
+  ['TICKET_ALREADY_CHECKED_IN', 'Билет уже использован'], ['EVENT_ALREADY_STARTED', 'Мероприятие уже началось'],
+  ['EVENT_FINISHED', 'Мероприятие завершилось'], ['EVENT_CANCELLED', 'Мероприятие отменено'],
+  ['SERVICE_UNAVAILABLE', 'Не удалось отменить регистрацию'],
+]) it(`shows cancellation error ${code} without retry`, async () => {
+  let deletes = 0;
+  setup((_input, options) => {
+    if (options?.method === 'DELETE') { deletes++; return error(code, code === 'SERVICE_UNAVAILABLE' ? 503 : 409); }
+    return json(confirmed);
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Отменить регистрацию' }));
+  expect(await screen.findByText(new RegExp(message))).toBeVisible();
+  expect(screen.getByText(confirmed.ticket_code)).toBeVisible();
+  expect(deletes).toBe(1);
+});
+it('refetches after repeated DELETE reports missing registration', async () => {
+  let reads = 0;
+  setup((_input, options) => options?.method === 'DELETE' ? error('REGISTRATION_NOT_FOUND', 404) : json(++reads === 1 ? confirmed : cancelled));
+  fireEvent.click(await screen.findByRole('button', { name: 'Отменить регистрацию' }));
+  expect(await screen.findByText('Регистрация отменена')).toBeVisible();
+});
