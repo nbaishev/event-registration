@@ -4,6 +4,7 @@ import { Link as RouterLink, useParams, useOutletContext } from 'react-router';
 import { ApiError } from '../../api/client';
 import { eventKeys, getEvent, publishEvent } from './api';
 import { formatEventTime } from './event-time';
+import { EventCapacityForm } from './event-capacity-form';
 export function EventDetailPage() {
   const ownerId = useOutletContext<string>();
   const { eventId = '' } = useParams();
@@ -37,6 +38,7 @@ export function EventDetailPage() {
     <Typography>Окончание: {formatEventTime(event.ends_at, event.timezone)}</Typography>
     <Typography>Часовой пояс: {event.timezone}</Typography>
     <Typography>Количество мест: {event.capacity}</Typography>
+    {event.status === 'PUBLISHED' && <EventCapacityForm key={event.id} event={event} />}
     <Typography sx={{ overflowWrap: 'anywhere' }}>Ссылка события: {event.slug}</Typography>
   </Stack></Paper>;
 }

@@ -1,9 +1,11 @@
 import re
 import secrets
 import unicodedata
+from datetime import datetime
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.common.clock import Clock
@@ -85,7 +87,26 @@ def patch_owned_event(
     if event.owner_id != owner_id:
         raise AppError(403, "EVENT_NOT_OWNER", "You do not own this event.")
     if event.status == EventStatus.PUBLISHED:
-        raise AppError(409, "EVENT_NOT_EDITABLE", "Published events cannot be edited.")
+        try:
+            if body.model_fields_set != {"capacity"}:
+                raise AppError(
+                    409, "EVENT_NOT_EDITABLE", "Only published capacity can be edited."
+                )
+            assert body.capacity is not None
+            if body.capacity == event.capacity:
+                session.rollback()
+                return event
+            patch_published_capacity(session, event, clock.now(), body.capacity)
+            session.commit()
+            return event
+        except SQLAlchemyError:
+            session.rollback()
+            raise AppError(
+                503, "SERVICE_UNAVAILABLE", "Database is unavailable."
+            ) from None
+        except Exception:
+            session.rollback()
+            raise
     if event.status == EventStatus.CANCELLED:
         raise AppError(409, "EVENT_CANCELLED", "Cancelled events cannot be edited.")
 
@@ -136,6 +157,31 @@ def patch_owned_event(
         )
 
     repository.save_event(session, event, updates, retry_slug=False)
+    return event
+
+
+def patch_published_capacity(
+    session: Session, event: Event, now: datetime, capacity: int
+) -> Event:
+    """Change capacity under the caller's Event lock and transaction."""
+    from app.registrations.promotion import fill_available_slots
+    from app.registrations.repository import count_confirmed
+
+    if capacity == event.capacity:
+        return event
+    if now >= event.starts_at:
+        raise AppError(409, "EVENT_ALREADY_STARTED", "Event has already started.")
+    if capacity < count_confirmed(session, event.id):
+        raise AppError(
+            409, "CAPACITY_BELOW_CONFIRMED", "Capacity is below confirmed participants."
+        )
+    increased = capacity > event.capacity
+    event.capacity = capacity
+    event.updated_at = now
+    # Flush Event before promotion's ticket savepoints; never commit here.
+    session.flush()
+    if increased:
+        fill_available_slots(session, event, now)
     return event
 
 
