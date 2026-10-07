@@ -1,7 +1,7 @@
 # Task 14 — Organizer Statistics
 
 Started at: `2026-10-08T00:42:26+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-08T01:03:45+06:00`
 
 ## Initial prompt
 
@@ -16,6 +16,8 @@ Execution prompt:
 - 2026-10-08T00:42:26+06:00 — создан worktree `feat/organizer-stats`, начало задачи.
 - 2026-10-08T00:48:13+06:00 — backend RED → GREEN, SQL snapshot и generated API реализованы.
 - 2026-10-08T00:53:28+06:00 — frontend GREEN, development gate и review пройдены; начат финальный make verify.
+- 2026-10-08T00:59:25+06:00 — полный gate и cleanup завершены, screenshots проверены, staged diff подготовлен.
+- 2026-10-08T01:03:45+06:00 — PR #17 создан, feature branch опубликована, реализация завершена.
 
 ## Decisions and deviations
 
@@ -95,4 +97,6 @@ Final verification: см. Final gate выше.
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/17
+
+Ветка опубликована через GitHub connector: локальный и remote Git tree совпадают. Worktree сохранён для PR review.
