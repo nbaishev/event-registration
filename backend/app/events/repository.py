@@ -106,3 +106,8 @@ def find_public_event(session: Session, slug: str) -> Event | None:
         )
     except SQLAlchemyError:
         raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+
+
+def delete_event(session: Session, event: Event) -> None:
+    """Delete under the caller's Event lock and transaction."""
+    session.delete(event)

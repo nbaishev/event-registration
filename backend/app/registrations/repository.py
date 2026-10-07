@@ -130,3 +130,15 @@ def read_my_snapshots(session: Session, user_id: UUID) -> list[dict[str, Any]]:
             .order_by(Registration.updated_at.desc(), Registration.id.desc())
         ).mappings()
     ]
+
+
+def count_registrations(session: Session, event_id: UUID) -> int:
+    """Count every registration, including cancelled rows, without committing."""
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(Registration)
+            .where(Registration.event_id == event_id)
+        )
+        or 0
+    )

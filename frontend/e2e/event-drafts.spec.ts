@@ -85,3 +85,45 @@ test('owner creates a draft, reloads details, sees mine and cannot read another 
     await expect(otherPage.getByText('Открытая встреча сообщества. <b>Обычный текст</b>')).toHaveCount(0);
   } finally { await other.close(); }
 });
+
+test('owner deletes an empty draft after confirmation and it stays absent after reload', async ({ page }) => {
+  await registerAndLogin(page);
+  await page.getByRole('link', { name: 'Мои мероприятия' }).click();
+  await page.getByRole('link', { name: 'Создать мероприятие' }).click();
+  const title = `Draft to delete ${randomUUID()}`;
+  await page.getByLabel('Название').fill(title);
+  await page.getByLabel('Описание').fill('Черновик для удаления');
+  await page.getByLabel('Часовой пояс IANA').fill('Asia/Almaty');
+  const date = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel(/^Начало/).fill(`${date}T18:30`);
+  await page.getByLabel(/^Окончание/).fill(`${date}T20:30`);
+  await page.getByLabel('Количество мест').fill('25');
+  const created = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/api/events'));
+  await page.getByRole('button', { name: 'Создать черновик' }).click();
+  const response = await created;
+  expect(response.status()).toBe(201);
+  const event = await response.json();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await page.getByRole('button', { name: 'Удалить черновик' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Удалить черновик?' });
+  await expect(dialog).toBeVisible();
+  await page.screenshot({ path: '../.verification/event-delete-confirmation.png', fullPage: true, animations: 'disabled' });
+  await dialog.getByRole('button', { name: 'Отмена' }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await page.getByRole('button', { name: 'Удалить черновик' }).click();
+  const removed = page.waitForResponse(r => r.request().method() === 'DELETE' && r.url().endsWith(`/api/events/${event.id}`));
+  await dialog.getByRole('button', { name: 'Удалить', exact: true }).click();
+  const deletion = await removed;
+  expect(deletion.status()).toBe(204);
+  await expect(page).toHaveURL(/\/organizer\/events$/);
+  await expect(page.getByText('У вас пока нет мероприятий')).toBeVisible();
+  await expect(page.getByRole('link', { name: title })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText('У вас пока нет мероприятий')).toBeVisible();
+  await page.screenshot({ path: '../.verification/event-delete-list.png', fullPage: true, animations: 'disabled' });
+  await page.goto(`/organizer/events/${event.id}`);
+  await expect(page.getByRole('alert')).toContainText('Мероприятие не найдено');
+  await expect(page.getByRole('heading', { name: title })).toHaveCount(0);
+});
