@@ -1,7 +1,7 @@
 # Task 09 — отмена регистрации и FIFO promotion
 
 Started at: `2026-10-06T23:46:40+06:00`
-Finished at: IN PROGRESS
+Finished at: `2026-10-07T14:27:31+06:00`
 
 ## Initial prompt
 
@@ -28,11 +28,11 @@ Result: backend Ruff/format/mypy и `183 passed in 2.52s`; frontend lint/typeche
 
 ## Result
 
-Реализованы cancellation API, атомарный FIFO promotion, UI отмены/refetch/re-registration и тесты. Финальный make verify успешен; PR подготавливается.
+Реализованы cancellation API, атомарный FIFO promotion, UI отмены/refetch/re-registration и тесты. Финальный make verify успешен; PR #11 создан.
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/11
 
 ## Milestones / проверки разработки
 
@@ -66,3 +66,5 @@ Not created yet.
 - Обновление статуса очереди через reload/ручной refetch; realtime, email и check-in endpoint вне Task 09.
 - В одном запуске существующий auth-refresh E2E завершился timeout; последний полный gate прошёл без изменения auth-кода, test assertions или retries.
 - Чистый baseline make check не получен до новых tests из-за setup нового worktree; baseline make test и последующие полные gates прошли.
+
+- 2026-10-07T14:27:31+06:00 — PR #11 создан; staged diff secrets review выполнен, screenshots приложены; задача завершена. GitHub connector публикация сверена по source tree SHA; локальная ветка синхронизирована с remote commit SHA.

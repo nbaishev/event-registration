@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Использовать superpowers:executing-plans. Начинать checklist только по отдельной implementation команде пользователя.
 
-**Status:** Implementation выполнена; make verify exit 0 на 2026-10-07; PR подготавливается.
+**Status:** Implementation выполнена; make verify exit 0 на 2026-10-07; [PR #11](https://github.com/nbaishev/event-registration/pull/11) создан.
 
 **Task:** Отмена регистрации с атомарным FIFO promotion.
 
@@ -90,4 +90,4 @@
 - [x] 6. Выполнить `make api-generate`; добавить RTL cancellation success, errors, repeated DELETE, delayed GET, re-registration. Запустить `cd frontend && corepack pnpm exec vitest run src/features/registrations/event-registration-panel.test.tsx`, подтвердить RED.
 - [x] 7. Добавить cancel action и exact-query cancellation/cache update; повторить RTL до GREEN; commit UI/generated contract.
 - [x] 8. Расширить `event-registration` Playwright: A CONFIRMED, B WAITLIST, A cancel, B reload CONFIRMED; A re-register WAITLIST; B cancel, A reload CONFIRMED с новым ticket.
-- [ ] 9. Review, `make check`, финальный `make verify`, screenshots, actual verification в журнале и staged secrets check; один PR.
+- [x] 9. Review, `make check`, финальный `make verify`, screenshots, actual verification в журнале и staged secrets check; один PR.
