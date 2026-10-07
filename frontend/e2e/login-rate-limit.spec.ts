@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('login limiter permits initial request plus burst five and ignores forged forwarded IPs', async ({ request, baseURL }) => {
-  // The verification runner restarts this isolated project's Nginx immediately before this probe.
+  // The shared fixture resets this isolated project's Nginx before every test.
   const csrf = await request.get('/api/auth/csrf');
   const token = (await csrf.json()).csrf_token;
   const responses = await Promise.all(Array.from({ length: 20 }, (_, index) => request.post('/api/auth/login', {
@@ -20,4 +20,16 @@ test('login limiter permits initial request plus burst five and ignores forged f
   const guard = (await request.get('/api/auth/csrf').then(response => response.json())).csrf_token;
   const logout = await request.post('/api/auth/logout', { headers: { Origin: baseURL!, 'X-CSRF-Token': guard } });
   expect(logout.status()).toBe(204);
+});
+
+// Runs after the preceding test exhausted this worker's login bucket.
+// A fresh browser/request context alone must not be mistaken for limiter isolation.
+test('login limiter gives the next independent test a fresh bucket', async ({ request, baseURL }) => {
+  const token = (await request.get('/api/auth/csrf').then(response => response.json())).csrf_token;
+  const response = await request.post('/api/auth/login', {
+    data: { email: 'another-unknown@example.com', password: 'incorrect password' },
+    headers: { Origin: baseURL!, 'X-CSRF-Token': token },
+  });
+  expect(response.status()).toBe(401);
+  expect((await response.json()).error.code).toBe('AUTH_INVALID_CREDENTIALS');
 });

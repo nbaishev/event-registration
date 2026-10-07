@@ -1,5 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // Signing stays in the Node test runner. The isolated verification stack supplies
 // its ephemeral secret; it is never sent to page JavaScript or included in output.

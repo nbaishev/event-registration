@@ -80,44 +80,28 @@ def verify(mode: str) -> None:
                 env=environment,
             )
             run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
-            run(
-                [
-                    *pnpm,
-                    "e2e",
-                    "--grep-invert",
-                    "login limiter|event-drafts|event-publish|event-registration|my-registrations",
-                ],
-                cwd=ROOT / "frontend",
-                env=environment | {"E2E_BASE_URL": f"http://{address}"},
+            nginx_id = subprocess.check_output(
+                [*compose, "ps", "-q", "nginx"], cwd=ROOT, env=environment, text=True
+            ).strip()
+            browser_env = environment | {
+                "E2E_BASE_URL": f"http://{address}",
+                "E2E_NGINX_CONTAINER": nginx_id,
+            }
+            # Keep the CI auth order; the automatic fixture resets the isolated
+            # Nginx before every test, including consecutive tests in one file.
+            event_groups = (
+                "login limiter|event-drafts|event-publish|"
+                "event-registration|my-registrations"
             )
-            # Event lifecycle scenarios need their own rate budget after the auth suite.
-            # Restart only this invocation's unique proxy; production limits stay intact.
-            run([*compose, "restart", "nginx"], env=environment)
             run(
-                [*pnpm, "e2e", "--grep", "event-drafts|event-publish"],
+                [*pnpm, "e2e", "--grep-invert", event_groups],
                 cwd=ROOT / "frontend",
-                env=environment | {"E2E_BASE_URL": f"http://{address}"},
+                env=browser_env,
             )
-            # Registration has three independent logins and gets an isolated rate budget.
-            run([*compose, "restart", "nginx"], env=environment)
             run(
-                [*pnpm, "e2e", "--grep", "event-registration"],
+                [*pnpm, "e2e", "--grep", event_groups],
                 cwd=ROOT / "frontend",
-                env=environment | {"E2E_BASE_URL": f"http://{address}"},
-            )
-            # Participant list/account switch has its own login rate budget.
-            run([*compose, "restart", "nginx"], env=environment)
-            run(
-                [*pnpm, "e2e", "--grep", "my-registrations"],
-                cwd=ROOT / "frontend",
-                env=environment | {"E2E_BASE_URL": f"http://{address}"},
-            )
-            # Reset the rate zone in this unique test project; no developer stack is touched.
-            run([*compose, "restart", "nginx"], env=environment)
-            run(
-                [*pnpm, "e2e", "--grep", "login limiter"],
-                cwd=ROOT / "frontend",
-                env=environment | {"E2E_BASE_URL": f"http://{address}"},
+                env=browser_env,
             )
         print(f"{mode}: passed (isolated project {project}).")
     finally:

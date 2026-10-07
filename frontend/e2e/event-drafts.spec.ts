@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 async function registerAndLogin(page: Page) {
   const email = `event-owner-${randomUUID()}@example.com`, password = 'a long password';
   await page.goto('/register');

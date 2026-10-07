@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('Day 2 create → edit → publish → anonymous, failed refresh and logout public access', async ({ page, browser, baseURL }) => {
   const email = `publish-${randomUUID()}@example.com`, password = 'a long password';

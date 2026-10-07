@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 for (const path of ['/', '/login']) {
   test(`direct navigation and reload at ${path}`, async ({ page }) => {
     await page.goto(path);
