@@ -56,9 +56,11 @@ def verify(mode: str) -> None:
         test_env = environment | {
             "TEST_DATABASE_URL": f"postgresql+psycopg://event_registration:development@{address}/foundation_verification"
         }
-        if mode in {"test", "verify"}:
+        if mode == "test":
             run([*uv, "pytest", "backend/tests", "-q"], env=test_env)
             run([*pnpm, "test"], cwd=ROOT / "frontend", env=environment)
+        elif mode == "verify":
+            run([*uv, "pytest", "backend/tests/integration", "-q"], env=test_env)
         if mode in {"e2e", "verify"}:
             if mode == "verify":
                 run([*uv, "python", "scripts/verify_migrations.py"], env=test_env)
