@@ -17,6 +17,7 @@ from app.events.schemas import (
 )
 from app.events.service import (
     create_event,
+    delete_owned_event,
     get_owned_event,
     get_public_event,
     list_owned_events,
@@ -103,6 +104,15 @@ def publish_event(
     return EventResponse.model_validate(
         publish_owned_event(session, clock, user.id, event_id)
     )
+
+
+@router.delete(
+    "/{event_id}",
+    status_code=204,
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
+def delete_event(event_id: UUID, user: CurrentUser, session: DatabaseSession) -> None:
+    delete_owned_event(session, user.id, event_id)
 
 
 public_router = APIRouter(

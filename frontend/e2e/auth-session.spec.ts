@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('register login reload logout through the same origin proxy', async ({ page }) => {
   const email = `session-${randomUUID()}@example.com`;

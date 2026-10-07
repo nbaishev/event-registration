@@ -339,3 +339,128 @@ it('preserves the published detail when an older background draft GET settles la
   expect(screen.queryByRole('button', { name: 'Опубликовать' })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Редактировать черновик' })).not.toBeInTheDocument();
 });
+
+it('dismisses draft deletion confirmation without a DELETE request', async () => {
+  let deletions = 0;
+  setup(`/organizer/events/${event.id}`, (_input, options) => {
+    if (options?.method === 'DELETE') deletions++;
+    return json(event);
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Удалить черновик' }));
+  expect(await screen.findByRole('dialog', { name: 'Удалить черновик?' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Отмена' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(deletions).toBe(0);
+  expect(screen.getByRole('heading', { name: event.title })).toBeVisible();
+});
+
+it.each(['PUBLISHED', 'CANCELLED'])('does not offer deletion for %s', async status => {
+  setup(`/organizer/events/${event.id}`, () => json({ ...event, status }));
+  await screen.findByRole('heading', { name: event.title });
+  expect(screen.queryByRole('button', { name: 'Удалить черновик' })).not.toBeInTheDocument();
+});
+
+it.each([['EVENT_NOT_DELETABLE', 409, 'Нельзя удалить'], ['SERVICE_UNAVAILABLE', 503, 'Не удалось удалить']] as const)('keeps the draft and permits deletion retry after %s', async (code, status, message) => {
+  let attempts = 0;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (options?.method === 'DELETE') {
+      attempts++;
+      return attempts === 1 ? error(code, status) : new Response(null, { status: 204 });
+    }
+    return input === '/api/events/mine' ? json([]) : json(event);
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Удалить черновик' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Удалить$/ }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  expect(screen.getByRole('heading', { name: event.title, hidden: true })).toBeVisible();
+  expect(screen.getByRole('button', { name: /^Удалить$/ })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: /^Удалить$/ }));
+  expect(await screen.findByText('У вас пока нет мероприятий')).toBeVisible();
+  expect(attempts).toBe(2);
+});
+
+it('disables repeat deletion while pending and handles an empty 204', async () => {
+  let resolveDelete!: (response: Response) => void;
+  let attempts = 0;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (options?.method === 'DELETE') {
+      attempts++;
+      expect(new Headers(options.headers).get('X-CSRF-Token')).toBe('test-token');
+      return new Promise<Response>(resolve => { resolveDelete = resolve; });
+    }
+    return input === '/api/events/mine' ? json([]) : json(event);
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Удалить черновик' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Удалить$/ }));
+  await waitFor(() => expect(attempts).toBe(1));
+  expect(screen.getByRole('button', { name: 'Удаляем…' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Отмена' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Удаляем…' }));
+  expect(attempts).toBe(1);
+  await act(async () => resolveDelete(new Response(null, { status: 204 })));
+  expect(await screen.findByText('У вас пока нет мероприятий')).toBeVisible();
+  expect(window.location.pathname).toBe('/organizer/events');
+});
+
+it('delete success survives delayed detail and mine GETs and direct removed detail is not found', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const detailKey = eventKeys.detail(user.id, event.id);
+  const mineKey = eventKeys.mine(user.id);
+  client.setQueryData(mineKey, [event]);
+  let deleted = false;
+  let detailReads = 0;
+  let mineReads = 0;
+  let resolveDetail!: (response: Response) => void;
+  let resolveMine!: (response: Response) => void;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (options?.method === 'DELETE') { deleted = true; return new Response(null, { status: 204 }); }
+    if (input === '/api/events/mine') {
+      if (++mineReads === 1) return new Promise<Response>(resolve => { resolveMine = resolve; });
+      return json([]);
+    }
+    if (input === `/api/events/${event.id}`) {
+      if (deleted) return error('EVENT_NOT_FOUND', 404);
+      if (++detailReads === 2) return new Promise<Response>(resolve => { resolveDetail = resolve; });
+      return json(event);
+    }
+    throw new Error(`Unexpected request: ${String(input)}`);
+  }, client);
+  await screen.findByRole('heading', { name: event.title });
+  let detailFlight!: Promise<unknown>;
+  let mineFlight!: Promise<unknown>;
+  await act(async () => {
+    detailFlight = client.refetchQueries({ queryKey: detailKey, exact: true });
+    const { getMyEvents } = await import('./api');
+    mineFlight = client.fetchQuery({ queryKey: mineKey, queryFn: ({ signal }) => getMyEvents(signal) }).catch(() => undefined);
+  });
+  await waitFor(() => { expect(resolveDetail).toBeTypeOf('function'); expect(resolveMine).toBeTypeOf('function'); });
+  fireEvent.click(screen.getByRole('button', { name: 'Удалить черновик' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Удалить$/ }));
+  expect(await screen.findByText('У вас пока нет мероприятий')).toBeVisible();
+  await act(async () => { resolveDetail(json(event)); resolveMine(json([event])); await Promise.all([detailFlight, mineFlight]); });
+  expect(client.getQueryData(detailKey)).toBeUndefined();
+  expect(client.getQueryData(mineKey)).toEqual([]);
+  expect(screen.queryByRole('link', { name: event.title })).not.toBeInTheDocument();
+  await act(async () => { window.history.pushState({}, '', `/organizer/events/${event.id}`); window.dispatchEvent(new PopStateEvent('popstate')); });
+  expect(await screen.findByRole('alert')).toHaveTextContent('Мероприятие не найдено');
+  expect(screen.queryByRole('heading', { name: event.title })).not.toBeInTheDocument();
+});
+
+it('removes the deleted draft from the cached owner list while its reload is pending', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const other = { ...event, id: '00000000-0000-4000-8000-000000000003', title: 'Another draft' };
+  client.setQueryData(eventKeys.mine(user.id), [event, other]);
+  let resolveList!: (response: Response) => void;
+  setup(`/organizer/events/${event.id}`, (input, options) => {
+    if (options?.method === 'DELETE') return new Response(null, { status: 204 });
+    if (input === '/api/events/mine') return new Promise<Response>(resolve => { resolveList = resolve; });
+    return json(event);
+  }, client);
+  fireEvent.click(await screen.findByRole('button', { name: 'Удалить черновик' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Удалить$/ }));
+  await screen.findByRole('heading', { name: 'Мои мероприятия' });
+  await waitFor(() => expect(resolveList).toBeTypeOf('function'));
+  expect(screen.queryByRole('link', { name: event.title })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: other.title })).toBeVisible();
+  await act(async () => resolveList(json([other])));
+});

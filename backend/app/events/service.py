@@ -243,3 +243,24 @@ def get_public_event(session: Session, clock: Clock, slug: str) -> PublicEventRe
         capacity=event.capacity,
         status=status,
     )
+
+
+def delete_owned_event(session: Session, owner_id: UUID, event_id: UUID) -> None:
+    from app.registrations.repository import count_registrations
+
+    try:
+        event = repository.find_event_for_update(session, event_id)
+        if event is None:
+            raise AppError(404, "EVENT_NOT_FOUND", "Event not found.")
+        if event.owner_id != owner_id:
+            raise AppError(403, "EVENT_NOT_OWNER", "You do not own this event.")
+        if event.status != EventStatus.DRAFT or count_registrations(session, event.id):
+            raise AppError(409, "EVENT_NOT_DELETABLE", "Event cannot be deleted.")
+        repository.delete_event(session, event)
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+    except Exception:
+        session.rollback()
+        raise

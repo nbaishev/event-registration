@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('register through Nginx redirects to login without storing password', async ({ page }) => {
   const email = `register-${randomUUID()}@example.com`;
