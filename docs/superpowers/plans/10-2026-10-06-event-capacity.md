@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Использовать superpowers:executing-plans. Implementation начинается только по отдельной команде пользователя.
 
-**Status:** Capacity-only PUBLISHED PATCH и scope утверждены пользователем в чате 2026-10-06; implementation не начата.
+**Status:** Capacity-only PUBLISHED PATCH и scope утверждены пользователем в чате 2026-10-06; implementation завершена; независимый review и `make verify` успешны (2026-10-07).
 
 **Task:** Изменение capacity опубликованного Event с promotion.
 
@@ -74,12 +74,12 @@ Boundary tests: now==starts_at, capacity==confirmed, capacity==confirmed-1, 0/bo
 
 ## Execution steps
 
-- [ ] 1. По execution команде после merge 09 создать branch/worktree, baseline и log до implementation.
-- [ ] 2. Написать unit guards/no-op/mixed-body tests; `uv run --frozen --project backend pytest backend/tests/unit/test_event_capacity.py -q` → ожидаемый RED, записать причину.
-- [ ] 3. Реализовать dispatch и capacity helper; повторить unit command до GREEN.
-- [ ] 4. Добавить PostgreSQL tests Review Focus и race/boundary matrix; `make test` → RED для отсутствующего transactional behavior.
-- [ ] 5. Реализовать atomic persistence до GREEN `make test`; targeted historical PUBLISHED test обновить только для утверждённого capacity exception; commit backend/tests.
-- [ ] 6. Синхронизировать OpenAPI через `make api-generate` при contract change. Написать RTL prefill/save/error/dirty-refetch/delayed-GET tests; `cd frontend && corepack pnpm exec vitest run src/features/events/event-capacity-form.test.tsx` → RED.
-- [ ] 7. Реализовать form/details integration, exact detail query cancellation перед cache write, invalidation mine/public queries; повторить RTL до GREEN; commit UI.
-- [ ] 8. Добавить Playwright capacity increase с WAITLIST participant → reload CONFIRMED и rejected decrease → unchanged reload.
-- [ ] 9. Review, `make check`, финальный `make verify`, screenshots, journal actual results и secrets check; один PR.
+- [x] 1. По execution команде после merge 09 создать branch/worktree, baseline и log до implementation.
+- [x] 2. Написать unit guards/no-op/mixed-body tests; `uv run --frozen --project backend pytest backend/tests/unit/test_event_capacity.py -q` → ожидаемый RED, записать причину.
+- [x] 3. Реализовать dispatch и capacity helper; повторить unit command до GREEN.
+- [x] 4. Добавить PostgreSQL tests Review Focus и race/boundary matrix; `make test` → RED для отсутствующего transactional behavior.
+- [x] 5. Реализовать atomic persistence до GREEN `make test`; targeted historical PUBLISHED test обновить только для утверждённого capacity exception; commit backend/tests.
+- [x] 6. Синхронизировать OpenAPI через `make api-generate` при contract change. Написать RTL prefill/save/error/dirty-refetch/delayed-GET tests; `cd frontend && corepack pnpm exec vitest run src/features/events/event-capacity-form.test.tsx` → RED.
+- [x] 7. Реализовать form/details integration, exact detail query cancellation перед cache write, invalidation mine/public queries; повторить RTL до GREEN; commit UI.
+- [x] 8. Добавить Playwright capacity increase с WAITLIST participant → reload CONFIRMED и rejected decrease → unchanged reload.
+- [x] 9. Review, `make check`, финальный `make verify`, screenshots, journal actual results и secrets check; один PR.
