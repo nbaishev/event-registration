@@ -8,7 +8,11 @@ from app.common.errors import ErrorResponse
 from app.db.session import DatabaseSession
 from app.events.router import CurrentUser, private_response
 from app.registrations.schemas import RegistrationResponse
-from app.registrations.service import get_my_registration, register_for_event
+from app.registrations.service import (
+    cancel_registration,
+    get_my_registration,
+    register_for_event,
+)
 
 router = APIRouter(
     prefix="/api/events",
@@ -37,3 +41,13 @@ def own(
     event_id: UUID, user: CurrentUser, session: DatabaseSession
 ) -> RegistrationResponse:
     return get_my_registration(session, user.id, event_id)
+
+
+@router.delete("/{event_id}/registration", response_model=RegistrationResponse)
+def cancel(
+    event_id: UUID,
+    user: CurrentUser,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> RegistrationResponse:
+    return cancel_registration(session, clock, user.id, event_id)

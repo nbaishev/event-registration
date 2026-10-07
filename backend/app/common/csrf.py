@@ -45,6 +45,11 @@ class AuthSecurityMiddleware(BaseHTTPMiddleware):
             # credentials or database row values even with hidden SQL parameters.
             logger.error("Unhandled auth request error (%s).", type(exc).__name__)
             response = error_response(500, "INTERNAL_ERROR", "Internal server error.")
-        if request.url.path.startswith("/api/auth/"):
+        cancellation_request = (
+            request.method == "DELETE"
+            and request.url.path.startswith("/api/events/")
+            and request.url.path.rstrip("/").endswith("/registration")
+        )
+        if request.url.path.startswith("/api/auth/") or cancellation_request:
             response.headers["Cache-Control"] = "no-store"
         return response
