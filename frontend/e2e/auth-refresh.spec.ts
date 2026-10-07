@@ -74,35 +74,70 @@ test('expired refresh clears auth cookies and returns to login without a recover
   expect(refreshes).toBe(1);
   await expect(page.getByText(user.email)).not.toBeVisible();
 });
-test('logout waits for an in-flight refresh and clears its new access cookie', async ({ page }) => {
-  const user = await registerAndLogin(page);
-  await expireCookie(page.context(), user.id, 'access');
+// A cached login user can render while the first /me is still fetching.
+// Focus refetches reuse that query, so repeat the focus trigger until an actual
+// refresh request is intercepted. The bound reports a setup failure directly.
+async function beginHeldRefresh(page: Page, releaseInitial: () => void = () => {}) {
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
-  let started!: () => void;
-  const refreshing = new Promise<void>(resolve => { started = resolve; });
-  let logoutRequests = 0;
-  page.on('request', request => { if (request.url().endsWith('/api/auth/logout')) logoutRequests++; });
+  let started = false;
   await page.route('**/api/auth/refresh', async route => {
-    started();
+    started = true;
     await held;
     const response = await route.fetch();
+    expect(response.status()).toBe(200);
     await route.fulfill({ response });
   });
-  // TanStack Query refetches the stale session on visibilitychange; its cached
-  // user keeps the logout action available while recovery is in flight.
-  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
-  await refreshing;
-  await page.getByRole('button', { name: 'Выйти' }).click();
-  await expect(page.getByRole('button', { name: 'Выходим…' })).toBeDisabled();
-  expect(logoutRequests).toBe(0);
-  release();
-  await expect(page).toHaveURL(/\/login$/);
-  await expectAuthCookiesCleared(page.context());
-  expect(logoutRequests).toBe(1);
-  await expect(page.getByText(user.email)).not.toBeVisible();
-  expect((await page.request.get('/api/auth/me')).status()).toBe(401);
-});
+  try {
+    await expect.poll(async () => {
+      await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+      releaseInitial();
+      return started;
+    }, { message: 'Expired access must start refresh after the session query settles', timeout: 5000 }).toBe(true);
+    return release;
+  } catch (cause) {
+    releaseInitial();
+    release();
+    throw cause;
+  }
+}
+
+for (const initialSessionInFlight of [false, true]) {
+  test(`logout waits for an in-flight refresh and clears its new access cookie${initialSessionInFlight ? ' with initial session in flight' : ''}`, async ({ page }) => {
+    let releaseInitial: () => void = () => {};
+    let initialFetched = false;
+    try {
+      if (initialSessionInFlight) {
+        const initialHeld = new Promise<void>(resolve => { releaseInitial = resolve; });
+        await page.route('**/api/auth/me', async route => {
+          const response = await route.fetch();
+          if (!initialFetched && response.status() === 200) {
+            initialFetched = true;
+            await initialHeld;
+          }
+          await route.fulfill({ response });
+        });
+      }
+      const user = await registerAndLogin(page);
+      if (initialSessionInFlight) await expect.poll(() => initialFetched, { message: 'Initial /me response must be held' }).toBe(true);
+      await expireCookie(page.context(), user.id, 'access');
+      let logoutRequests = 0;
+      page.on('request', request => { if (request.url().endsWith('/api/auth/logout')) logoutRequests++; });
+      const release = await beginHeldRefresh(page, releaseInitial);
+      try {
+        await page.getByRole('button', { name: 'Выйти' }).click();
+        await expect(page.getByRole('button', { name: 'Выходим…' })).toBeDisabled();
+        expect(logoutRequests).toBe(0);
+        release();
+        await expect(page).toHaveURL(/\/login$/);
+        await expectAuthCookiesCleared(page.context());
+        expect(logoutRequests).toBe(1);
+        await expect(page.getByText(user.email)).not.toBeVisible();
+        expect((await page.request.get('/api/auth/me')).status()).toBe(401);
+      } finally { release(); }
+    } finally { releaseInitial(); }
+  });
+}
 
 test('old refresh cannot overwrite cookies after login as another account', async ({ page }) => {
   const first = await registerAndLogin(page);
@@ -127,31 +162,24 @@ test('old refresh cannot overwrite cookies after login as another account', asyn
   await page.evaluate(() => { history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); });
   await expect(page.getByText(first.email)).toBeVisible();
   await expireCookie(page.context(), first.id, 'access');
-  let release!: () => void;
-  const held = new Promise<void>(resolve => { release = resolve; });
-  let started!: () => void;
-  const refreshing = new Promise<void>(resolve => { started = resolve; });
-  await page.route('**/api/auth/refresh', async route => {
-    started(); await held;
-    const response = await route.fetch(); await route.fulfill({ response });
-  });
-  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
-  await refreshing;
-  await page.goBack();
-  await expect(page).toHaveURL(/\/login$/);
-  let loginRequests = 0;
-  page.on('request', request => { if (request.url().endsWith('/api/auth/login')) loginRequests++; });
-  await page.getByLabel('Email').fill(secondEmail);
-  await page.getByLabel('Пароль').fill('a long test password');
-  const loggedIn = page.waitForResponse(response => response.url().endsWith('/api/auth/login'));
-  await page.getByRole('button', { name: 'Войти' }).click();
-  await expect(page.getByRole('button', { name: 'Входим…' })).toBeDisabled();
-  expect(loginRequests).toBe(0);
-  release(); expect((await loggedIn).status()).toBe(200);
-  await expect(page.getByText(secondEmail)).toBeVisible();
-  expect(loginRequests).toBe(1);
-  const me = await page.request.get('/api/auth/me');
-  expect(me.status()).toBe(200);
-  expect((await me.json() as { email: string }).email).toBe(secondEmail);
-  await expect(page.getByText(first.email)).not.toBeVisible();
+  const release = await beginHeldRefresh(page);
+  try {
+    await page.goBack();
+    await expect(page).toHaveURL(/\/login$/);
+    let loginRequests = 0;
+    page.on('request', request => { if (request.url().endsWith('/api/auth/login')) loginRequests++; });
+    await page.getByLabel('Email').fill(secondEmail);
+    await page.getByLabel('Пароль').fill('a long test password');
+    const loggedIn = page.waitForResponse(response => response.url().endsWith('/api/auth/login'));
+    await page.getByRole('button', { name: 'Войти' }).click();
+    await expect(page.getByRole('button', { name: 'Входим…' })).toBeDisabled();
+    expect(loginRequests).toBe(0);
+    release(); expect((await loggedIn).status()).toBe(200);
+    await expect(page.getByText(secondEmail)).toBeVisible();
+    expect(loginRequests).toBe(1);
+    const me = await page.request.get('/api/auth/me');
+    expect(me.status()).toBe(200);
+    expect((await me.json() as { email: string }).email).toBe(secondEmail);
+    await expect(page.getByText(first.email)).not.toBeVisible();
+  } finally { release(); }
 });
