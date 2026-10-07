@@ -36,11 +36,8 @@ docs/development-process.md
 
 Перед изменением кода:
 
-1. проверь текущую branch/worktree;
-2. запусти baseline tests, относящиеся к задаче;
-3. сообщи о существующих failures;
-4. создай development log задачи;
-5. не выходи за утверждённый scope.
+1. создай development log задачи;
+2. не выходи за утверждённый scope.
 
 ---
 
@@ -66,11 +63,7 @@ AGENTS.md / docs/agent-rules/
 
 ## Development loop
 
-Для обычной работы используй:
-
-```bash
-make check
-```
+Во время реализации используй targeted tests для изменяемого поведения.
 
 Для TDD-задач соблюдай:
 
@@ -78,13 +71,11 @@ make check
 RED → GREEN → REFACTOR
 ```
 
-Полный:
-
-```bash
-make verify
-```
-
-запускается **перед готовностью задачи к Pull Request**, а не после каждого изменения.
+Не запускай make test или make verify как промежуточную проверку,
+если targeted tests или make check достаточны.
+make verify является финальным локальным gate и запускается после review и fixes.
+Если после успешного make verify код или configuration не менялись,
+не запускай его повторно.
 
 ---
 

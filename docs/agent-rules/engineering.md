@@ -331,9 +331,14 @@ make verify
 ```
 
 Во время разработки:
-`make check` — основной development gate.
 
-`make verify` — только финальный gate после review и fixes.
+- targeted tests — для RED/GREEN текущего изменения;
+- `make check` — основной development gate;
+- `make test` не запускается автоматически перед review;
+- `make verify` — финальный gate после review и fixes.
+
+Если targeted tests и `make check` уже прошли, полный backend/frontend suite
+не нужно дополнительно запускать перед review — он входит в финальный verification.
 
 Не повторять успешно выполненную проверку на неизменённом состоянии без конкретной
 причины. Повтор нужен после релевантных изменений кода, configuration или среды,
@@ -362,13 +367,26 @@ Unit tests в этом gate не требуют PostgreSQL или Compose. Пр�
 `make verify` — полный gate перед каждым PR:
 
 1. `make check`;
-2. `make test`;
-3. миграционная проверка: пустая изолированная PostgreSQL → `alembic upgrade head`, соответствие revision head и отсутствие расхождения metadata/schema через `alembic check`;
+2. PostgreSQL integration tests, не входящие в `make check`;
+3. миграционная проверка: пустая изолированная PostgreSQL → `alembic upgrade head`,
+   соответствие revision head и отсутствие расхождения metadata/schema через `alembic check`;
 4. frontend production build и сборка backend/frontend Docker images;
 5. `docker compose config` и `nginx -t`;
-6. запуск изолированного Compose test stack, readiness/same-origin smoke и `make e2e` через Nginx.
+6. запуск изолированного Compose test stack, readiness/same-origin smoke и Playwright через Nginx.
 
-Каждый шаг обязателен; любой failure завершает gate ненулевым exit code. Нельзя заменять ещё не настроенную проверку успешной заглушкой или silently skip. Integration/E2E используют отдельные database/project names; проверка миграций никогда не очищает development/production DB. Test stack освобождается и при failure. Повторно выполнять тот же suite внутри одного gate не требуется: результаты `make check` могут переиспользоваться для `make test`, если полный набор tests действительно выполнен.
+Каждый шаг обязателен; любой failure завершает gate ненулевым exit code. Нельзя заменять ещё не настроенную проверку успешной заглушкой или silently skip. Integration/E2E используют отдельные database/project names; проверка миграций никогда не очищает development/production DB. Test stack освобождается и при failure. Внутри одного `make verify` не повторять suites, уже успешно выполненные
+`make check` на том же состоянии кода.
+
+Поэтому:
+
+- backend unit tests выполняются один раз через `make check`;
+- frontend Vitest выполняется один раз через `make check`;
+- отдельно после `make check` выполняются только PostgreSQL integration tests;
+- затем migrations/build/Docker/Nginx/E2E.
+
+`make test` остаётся самостоятельной командой для ручного запуска полного
+backend + frontend test suite, но не является обязательным промежуточным шагом
+перед review.
 
 CI запускает тот же `make verify`. Day 1 Foundation task создаёт реализацию этих команд; до неё команды отсутствуют. Состав gates хранится только здесь, планы ссылаются на этот раздел.
 
