@@ -1,3 +1,4 @@
+import { CheckInPage } from './features/events/check-in-page';
 import { MyRegistrationsPage } from './features/registrations/my-registrations-page';
 import { CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ export function App({ client }: { client?: QueryClient } = {}) {
           <Route path="/organizer/events" element={<OrganizerLayout />}>
             <Route index element={<EventListPage />} />
             <Route path="new" element={<EventCreatePage />} />
+            <Route path=":eventId/check-in" element={<CheckInPage />} />
             <Route path=":eventId/edit" element={<EventEditPage />} />
             <Route path=":eventId" element={<EventDetailPage />} />
           </Route>

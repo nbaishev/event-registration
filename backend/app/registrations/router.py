@@ -7,8 +7,14 @@ from app.common.clock import Clock, get_clock
 from app.common.errors import ErrorResponse
 from app.db.session import DatabaseSession
 from app.events.router import CurrentUser, private_response
+from app.registrations.checkin import check_in
 from app.registrations.read_service import list_my_registrations
-from app.registrations.schemas import MyRegistrationResponse, RegistrationResponse
+from app.registrations.schemas import (
+    CheckInRequest,
+    CheckInResponse,
+    MyRegistrationResponse,
+    RegistrationResponse,
+)
 from app.registrations.service import (
     cancel_registration,
     get_my_registration,
@@ -69,3 +75,14 @@ def mine(
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> list[MyRegistrationResponse]:
     return list_my_registrations(session, clock, user.id)
+
+
+@router.post("/{event_id}/check-ins", response_model=CheckInResponse)
+def check_in_ticket(
+    event_id: UUID,
+    body: CheckInRequest,
+    user: CurrentUser,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+) -> CheckInResponse:
+    return check_in(session, clock, user.id, event_id, body.ticket_code)

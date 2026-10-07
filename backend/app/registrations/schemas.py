@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictStr, field_validator
 
 from app.registrations.models import RegistrationStatus
 
@@ -33,3 +33,28 @@ class RegistrationEventSummary(BaseModel):
 class MyRegistrationResponse(BaseModel):
     registration: RegistrationResponse
     event: RegistrationEventSummary
+
+
+class CheckInRequest(BaseModel):
+    ticket_code: StrictStr
+
+    @field_validator("ticket_code")
+    @classmethod
+    def normalize_code(cls, value: str) -> str:
+        from app.registrations.tickets import normalize_ticket_code
+
+        return normalize_ticket_code(value)
+
+
+class CheckInParticipant(BaseModel):
+    user_id: UUID
+    email: str
+
+
+class CheckInResponse(BaseModel):
+    status: Literal["checked_in"] = "checked_in"
+    registration_id: UUID
+    event_id: UUID
+    ticket_code: str
+    checked_in_at: datetime
+    participant: CheckInParticipant

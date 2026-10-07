@@ -68,6 +68,7 @@ export function EventDetailPage() {
     <Typography>Окончание: {formatEventTime(event.ends_at, event.timezone)}</Typography>
     <Typography>Часовой пояс: {event.timezone}</Typography>
     <Typography>Количество мест: {event.capacity}</Typography>
+    {event.status === 'PUBLISHED' && <Button component={RouterLink} to={`/organizer/events/${event.id}/check-in`}>Check-in</Button>}
     {event.status === 'PUBLISHED' && <EventCapacityForm key={event.id} event={event} />}
     <Typography sx={{ overflowWrap: 'anywhere' }}>Ссылка события: {event.slug}</Typography>
   </Stack></Paper>;

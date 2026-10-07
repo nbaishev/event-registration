@@ -93,7 +93,7 @@ def verify(mode: str) -> None:
             # Nginx before every test, including consecutive tests in one file.
             event_groups = (
                 "login limiter|event-drafts|event-publish|"
-                "event-registration|my-registrations"
+                "event-registration|my-registrations|check-in"
             )
             run(
                 [*pnpm, "e2e", "--grep-invert", event_groups],
