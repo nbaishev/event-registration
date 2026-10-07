@@ -1,7 +1,7 @@
 # Task 11 — Мои регистрации
 
 Started at: `2026-10-07T19:49:07+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-07T20:12:19+06:00`
 
 ## Initial prompt
 
@@ -17,6 +17,8 @@ Finished at: `IN PROGRESS`
 
 - 2026-10-07T20:09:33+06:00 — make verify exit 0; 404 backend, 120 frontend, 17 Playwright; screenshot проверен, credentials отсутствуют.
 
+- 2026-10-07T20:12:19+06:00 — PR #13 создан через GitHub connector; remote и local tree совпадают (1bbb82b).
+
 ## Decisions and deviations
 
 - 2026-10-07T19:58:39+06:00: GitHub connector подтвердил remote master = 89360a0; worktree основан на актуальном master.
@@ -25,6 +27,9 @@ Finished at: `IN PROGRESS`
 
 - HTTPS fetch не выполнен: отсутствует Git authentication. Локальные master/origin/master совпадают, Task 09 merged (2b91f0e).
 - Первые baseline запуски ограничены sandbox (uv cache/Docker), повторены с escalation.
+
+- Публикация через GitHub connector вместо git push (HTTPS credentials недоступны). Connector создаёт отдельный commit SHA; проверено точное совпадение remote/local tree. Remote PR branch `feat/my-registrations`, initial remote commit `0e31258`.
+- Auto-review сначала отверг screenshot как egress в неподтверждённый репозиторий. Read-only metadata подтвердили private repo, соответствие origin и admin/push permissions; screenshot inspected, ephemeral test data без credentials. Повтор разрешён; непогашенных approval blockers нет.
 
 ## Verification
 
@@ -67,4 +72,4 @@ Known limitations: список без pagination, promotion отображае�
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/13
