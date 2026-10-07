@@ -54,6 +54,20 @@ test('event-registration: last seat, waitlist and saved participant states after
     await expect(second.getByText(ticket!)).toHaveCount(0);
     await first.screenshot({ path: '../.verification/registration-confirmed.png', fullPage: true });
     await second.screenshot({ path: '../.verification/registration-waitlist.png', fullPage: true });
+    await first.getByRole('button', { name: 'Отменить регистрацию' }).click();
+    await expect(first.getByText('Регистрация отменена')).toBeVisible();
+    await second.reload();
+    await expect(second.getByText('Регистрация подтверждена')).toBeVisible();
+    await first.getByRole('button', { name: 'Зарегистрироваться' }).click();
+    await expect(first.getByText('Место в очереди: 1')).toBeVisible();
+    await second.getByRole('button', { name: 'Отменить регистрацию' }).click();
+    await expect(second.getByText('Регистрация отменена')).toBeVisible();
+    await first.reload();
+    await expect(first.getByText('Регистрация подтверждена')).toBeVisible();
+    const newTicket = await first.getByText(/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}$/).textContent();
+    expect(newTicket).not.toBe(ticket);
+    await first.screenshot({ path: '../.verification/registration-promoted.png', fullPage: true });
+    await second.screenshot({ path: '../.verification/registration-cancelled.png', fullPage: true });
     // Failed refresh must leave this public route visible and remove private ticket data.
     for (const cookie of await a.cookies()) if (['access_token', 'refresh_token'].includes(cookie.name)) await a.addCookies([{ ...cookie, value: 'invalid-test-token' }]);
     const failed = first.waitForResponse(r => r.url().endsWith('/api/auth/refresh'));
@@ -61,7 +75,7 @@ test('event-registration: last seat, waitlist and saved participant states after
     expect((await failed).status()).toBe(401);
     await expect(first.getByRole('link', { name: 'Войти для регистрации' })).toBeVisible();
     await expect(first.getByRole('heading', { name: 'Registration capacity one' })).toBeVisible();
-    await expect(first.getByText(ticket!)).toHaveCount(0);
+    await expect(first.getByText(newTicket!)).toHaveCount(0);
     await expect(first).toHaveURL(new RegExp(`/events/${event.slug}$`));
   } finally { await a.close(); await b.close(); }
 });
