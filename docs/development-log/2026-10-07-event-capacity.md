@@ -1,7 +1,7 @@
 # Task 10 — Изменение capacity опубликованного Event
 
 Started at: `2026-10-07T17:10:59+05:00`
-Finished at: `2026-10-07T17:25:42+05:00`
+Finished at: `2026-10-07T17:27:55+05:00`
 
 ## Initial prompt
 
@@ -22,6 +22,8 @@ Execution prompt:
 - 2026-10-07T17:21:21+05:00 — независимый whole-task code review: critical/important findings отсутствуют; пробел в journal уже удалён до замечания. Финальный `make verify` выполняется.
 
 - 2026-10-07T17:25:42+05:00 — финальный `make verify` exit 0, включая cleanup; screenshots проверены визуально и добавлены в `docs/screenshots/`; staged/branch diff проверен на secrets.
+
+- 2026-10-07T17:27:55+05:00 — GitHub PR #12 открыт в master; remote/local source trees совпадают. Финальная запись меняет только журнал публикации.
 
 ## Decisions and deviations
 
@@ -68,4 +70,6 @@ Screenshots: `docs/screenshots/event-capacity-increased.png`, `event-capacity-pr
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/12
+
+Open, не merged. Remote implementation commit `df35b61b21b0303319ae0235e5a0537d772f1e6d` и local `81b0e76` имеют одинаковый tree `e501264c03ad5a47128c0109839819a5e3b5143f`. Commit SHA отличается из-за публикации через connector; source tree идентичен. Worktree сохранён для review feedback.
