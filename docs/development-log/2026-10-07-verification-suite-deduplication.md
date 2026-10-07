@@ -67,7 +67,9 @@ Final verification: evidence выше. Task 1: complete; независимый 
 
 ## Pull Request
 
-Not created yet. Automatic approval review rejected github_create_tree (upload implementation/tests/log to nbaishev/event-registration): external data egress without explicit publication authorization. Remote branch/PR не созданы; требуется разрешение пользователя на публикацию.
+https://github.com/nbaishev/event-registration/pull/15
+
+Первичная публикация была отклонена automatic approval review; после явного разрешения пользователя PR создан через GitHub connector.
 
 ## Publication authorization
 
