@@ -1,7 +1,7 @@
 # CI auth-refresh E2E setup race
 
 Started at: `2026-10-07T21:15:40+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-07T21:26:00+06:00`
 
 ## Initial prompt
 
@@ -28,6 +28,8 @@ Production auth code без подтверждённой необходимос�
 - 2026-10-07T21:19:34+06:00 — setup GREEN: targeted 10 passed (23.7s), exit 0; начат единственный финальный make verify.
 
 - 2026-10-07T21:23:40+06:00 — единственный финальный make verify exit 0; исправленный E2E прошёл также в полном suite.
+
+- 2026-10-07T21:26:00+06:00 — CI fix опубликован в PR #13 (36bdea6), remote/local trees совпадают; GitHub Verify #48 запущен.
 
 ## Decisions and deviations
 
@@ -71,7 +73,7 @@ Result: `verify: passed (isolated project foundation-verify-c0ba44ba0570).`
 
 ## Result
 
-Setup failing test ждёт successful initial /me и завершения body до замены cookies. `refreshes === 1` сохранён. Production auth и общий helper не изменены. Проверки — выше; remote CI после публикации ожидается.
+Setup failing test ждёт successful initial /me и завершения body до замены cookies. `refreshes === 1` сохранён. Production auth и общий helper не изменены. Проверки — выше; GitHub CI после публикации: [PR checks](https://github.com/nbaishev/event-registration/pull/13/checks), запуск [Verify #48](https://github.com/nbaishev/event-registration/actions/runs/37643710671). Результат remote run проверяется после локального завершения.
 
 Known limitations: CI race не воспроизведён локально в исходных 10 повторах; проверка setup prerequisite опирается на код и существующий controlled initial-session-in-flight test.
 
