@@ -15,3 +15,6 @@ export type PublicEventResponse = components['schemas']['PublicEventResponse'];
 export const publishEvent = (id: string) => apiRequest<EventResponse>(`/api/events/${encodeURIComponent(id)}/publish`, { method: 'POST', requiresAuth: true });
 export const publicEventKey = (slug: string) => ['public-events', slug] as const;
 export const getPublicEvent = (slug: string, signal?: AbortSignal) => apiRequest<PublicEventResponse>(`/api/public/events/${encodeURIComponent(slug)}`, { signal });
+
+export type CheckInResponse = components['schemas']['CheckInResponse'];
+export const checkIn = (eventId: string, ticketCode: string) => apiRequest<CheckInResponse>(`/api/events/${encodeURIComponent(eventId)}/check-ins`, { method: 'POST', body: JSON.stringify({ ticket_code: ticketCode }), requiresAuth: true });

@@ -111,3 +111,9 @@ def find_public_event(session: Session, slug: str) -> Event | None:
 def delete_event(session: Session, event: Event) -> None:
     """Delete under the caller's Event lock and transaction."""
     session.delete(event)
+
+
+def find_event_for_share(session: Session, event_id: UUID) -> Event | None:
+    return session.scalar(
+        select(Event).where(Event.id == event_id).with_for_update(read=True)
+    )

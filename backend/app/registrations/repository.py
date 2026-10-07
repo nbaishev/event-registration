@@ -1,7 +1,8 @@
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.events.models import Event, EventStatus
@@ -141,4 +142,35 @@ def count_registrations(session: Session, event_id: UUID) -> int:
             .where(Registration.event_id == event_id)
         )
         or 0
+    )
+
+
+def mark_checked_in(
+    session: Session, event_id: UUID, ticket_code: str, now: datetime
+) -> Registration | None:
+    return session.scalar(
+        update(Registration)
+        .where(
+            Registration.event_id == event_id,
+            Registration.ticket_code == ticket_code,
+            Registration.status == RegistrationStatus.CONFIRMED,
+            Registration.checked_in_at.is_(None),
+        )
+        .values(checked_in_at=now, updated_at=now)
+        .returning(Registration)
+        .execution_options(populate_existing=True)
+    )
+
+
+def find_confirmed_ticket(
+    session: Session, event_id: UUID, ticket_code: str
+) -> Registration | None:
+    return session.scalar(
+        select(Registration)
+        .where(
+            Registration.event_id == event_id,
+            Registration.ticket_code == ticket_code,
+            Registration.status == RegistrationStatus.CONFIRMED,
+        )
+        .execution_options(populate_existing=True)
     )

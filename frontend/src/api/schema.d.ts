@@ -159,6 +159,23 @@ export interface paths {
         patch: operations["patch_event_api_events__event_id__patch"];
         trace?: never;
     };
+    "/api/events/{event_id}/check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check In Ticket */
+        post: operations["check_in_ticket_api_events__event_id__check_ins_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events/{event_id}/my-registration": {
         parameters: {
             query?: never;
@@ -299,6 +316,48 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CheckInParticipant */
+        CheckInParticipant: {
+            /** Email */
+            email: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** CheckInRequest */
+        CheckInRequest: {
+            /** Ticket Code */
+            ticket_code: string;
+        };
+        /** CheckInResponse */
+        CheckInResponse: {
+            /**
+             * Checked In At
+             * Format: date-time
+             */
+            checked_in_at: string;
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
+            participant: components["schemas"]["CheckInParticipant"];
+            /**
+             * Registration Id
+             * Format: uuid
+             */
+            registration_id: string;
+            /**
+             * Status
+             * @default checked_in
+             * @constant
+             */
+            status: "checked_in";
+            /** Ticket Code */
+            ticket_code: string;
+        };
         /** CsrfResponse */
         CsrfResponse: {
             /** Csrf Token */
@@ -1215,6 +1274,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    check_in_ticket_api_events__event_id__check_ins_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckInRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckInResponse"];
                 };
             };
             /** @description Unauthorized */
