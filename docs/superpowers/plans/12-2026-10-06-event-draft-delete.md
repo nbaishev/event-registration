@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Использовать superpowers:executing-plans. Implementation только по отдельной команде пользователя.
 
-**Status:** Декомпозиция/scope утверждены в чате 2026-10-06; implementation не начата.
+**Status:** Реализован 2026-10-07; независимый review без замечаний, финальный `make verify` exit 0. PR #14 merged в master (`298c33b`). Evidence: [development log](../../development-log/2026-10-07-event-draft-delete.md).
 
 **Task:** Физическое удаление DRAFT без registrations.
 
@@ -71,12 +71,12 @@ UI success отменяет exact owner detail и mine in-flight queries, уда
 
 ## Execution steps
 
-- [ ] 1. По implementation команде после merge 08 создать branch/worktree, baseline и task log до кода.
-- [ ] 2. Написать unit eligibility/ownership tests; `uv run --frozen --project backend pytest backend/tests/unit/test_event_delete.py -q` → RED.
-- [ ] 3. Реализовать delete service/all-status count до GREEN unit command.
-- [ ] 4. Добавить PostgreSQL tests Review Focus, DRAFT zero-count/WAITLIST/CONFIRMED/CANCELLED fixtures и CSRF/Origin checks; `make test` → RED для HTTP/persistence guarantees.
-- [ ] 5. Подключить DELETE router и transactional persistence до GREEN `make test`; commit backend/tests.
-- [ ] 6. Выполнить `make api-generate`; написать RTL dialog dismissal/confirm/pending/error/204/delayed-GET tests; `cd frontend && corepack pnpm exec vitest run src/features/events/event-pages.test.tsx` → RED.
-- [ ] 7. Реализовать delete wrapper/action/cache cleanup; повторить RTL до GREEN; client.test.ts regression только если изменён 204 handling; commit frontend/generated schema.
-- [ ] 8. Playwright `event-drafts` deletion: создать отдельный DRAFT, подтвердить удаление, list/reload без Event, direct old detail not found; существующий create/edit scenario сохраняется.
-- [ ] 9. Review, `make check`, финальный `make verify`, screenshots, journal actual results и staged secrets review; один PR. Полнота Day 3 оценивается после merge Tasks 08–12 и проверки интеграционного master; check-in race/SSE/email tests остаются Day 4–5.
+- [x] 1. По implementation команде после merge 08 создать branch/worktree, baseline и task log до кода.
+- [x] 2. Написать unit eligibility/ownership tests; `uv run --frozen --project backend pytest backend/tests/unit/test_event_delete.py -q` → RED.
+- [x] 3. Реализовать delete service/all-status count до GREEN unit command.
+- [x] 4. Добавить PostgreSQL tests Review Focus, DRAFT zero-count/WAITLIST/CONFIRMED/CANCELLED fixtures и CSRF/Origin checks; `make test` → RED для HTTP/persistence guarantees.
+- [x] 5. Подключить DELETE router и transactional persistence до GREEN `make test`; commit backend/tests.
+- [x] 6. Выполнить `make api-generate`; написать RTL dialog dismissal/confirm/pending/error/204/delayed-GET tests; `cd frontend && corepack pnpm exec vitest run src/features/events/event-pages.test.tsx` → RED.
+- [x] 7. Реализовать delete wrapper/action/cache cleanup; повторить RTL до GREEN; client.test.ts regression только если изменён 204 handling; commit frontend/generated schema.
+- [x] 8. Playwright `event-drafts` deletion: создать отдельный DRAFT, подтвердить удаление, list/reload без Event, direct old detail not found; существующий create/edit scenario сохраняется.
+- [x] 9. Review, `make check`, финальный `make verify`, screenshots, journal actual results и staged secrets review; один PR. Полнота Day 3 оценивается после merge Tasks 08–12 и проверки интеграционного master; check-in race/SSE/email tests остаются Day 4–5.
