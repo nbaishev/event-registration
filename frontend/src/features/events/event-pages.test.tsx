@@ -14,6 +14,7 @@ function setup(path: string, handler?: (input: RequestInfo | URL, options?: Requ
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (input, options) => {
     if (input === '/api/auth/me') return json(user);
     if (input === '/api/auth/csrf') return json({ csrf_token: 'test-token' });
+    if (input === `/api/events/${event.id}/stats`) return json({ event_id: event.id, capacity: event.capacity, confirmed: 0, waitlist: 0, checked_in: 0, available_slots: event.capacity });
     if (handler) return handler(input, options);
     if (input === '/api/events/mine') return json([event]);
     if (input === `/api/events/${event.id}`) return json(event);
@@ -228,6 +229,7 @@ it.each(['list', 'detail'])('isolates %s cache when another account logs in with
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
     if (input === '/api/auth/me') return json(current);
     if (input === '/api/auth/csrf') return json({ csrf_token: 'test-token' });
+    if (input === `/api/events/${event.id}/stats`) return json({ event_id: event.id, capacity: event.capacity, confirmed: 0, waitlist: 0, checked_in: 0, available_slots: event.capacity });
     if (input === '/api/auth/login') { current = other; return json(other); }
     if (current === other) return new Promise<Response>(resolve => { finishRequest = resolve; });
     return json(mode === 'list' ? [event] : event);
@@ -299,6 +301,7 @@ it.each(['failed refresh', 'logout'])('loads public data in the same document af
   const transport = await import('../../api/client');
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async input => {
     if (input === '/api/auth/csrf') return json({ csrf_token: 'test-token' });
+    if (input === `/api/events/${event.id}/stats`) return json({ event_id: event.id, capacity: event.capacity, confirmed: 0, waitlist: 0, checked_in: 0, available_slots: event.capacity });
     if (input === '/api/auth/logout') return new Response(null, { status: 204 });
     return error(String(input).endsWith('/refresh') ? 'AUTH_REFRESH_INVALID' : 'AUTH_REQUIRED', 401);
   }));

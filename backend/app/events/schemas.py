@@ -173,3 +173,12 @@ class PublicEventResponse(BaseModel):
     timezone: str
     capacity: int
     status: Literal["PUBLISHED", "FINISHED", "CANCELLED"]
+
+
+class StatsResponse(BaseModel):
+    event_id: UUID
+    capacity: int
+    confirmed: int
+    waitlist: int
+    checked_in: int
+    available_slots: int

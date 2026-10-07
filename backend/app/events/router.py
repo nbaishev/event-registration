@@ -14,6 +14,7 @@ from app.events.schemas import (
     EventResponse,
     EventSummary,
     PublicEventResponse,
+    StatsResponse,
 )
 from app.events.service import (
     create_event,
@@ -24,6 +25,7 @@ from app.events.service import (
     patch_owned_event,
     publish_owned_event,
 )
+from app.events.stats import get_owned_stats
 
 
 def private_response(response: Response) -> None:
@@ -71,6 +73,15 @@ def detail(
     event_id: UUID, user: CurrentUser, session: DatabaseSession
 ) -> EventResponse:
     return EventResponse.model_validate(get_owned_event(session, user.id, event_id))
+
+
+@router.get(
+    "/{event_id}/stats",
+    response_model=StatsResponse,
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
+def stats(event_id: UUID, user: CurrentUser, session: DatabaseSession) -> StatsResponse:
+    return get_owned_stats(session, user.id, event_id)
 
 
 @router.patch(

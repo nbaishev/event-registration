@@ -55,10 +55,16 @@ class AuthSecurityMiddleware(BaseHTTPMiddleware):
             and request.url.path.startswith("/api/events/")
             and request.url.path.rstrip("/").endswith("/check-ins")
         )
+        stats_request = (
+            request.method == "GET"
+            and request.url.path.startswith("/api/events/")
+            and request.url.path.rstrip("/").endswith("/stats")
+        )
         if (
             request.url.path.startswith(("/api/auth/", "/api/me/"))
             or cancellation_request
             or checkin_request
+            or stats_request
         ):
             response.headers["Cache-Control"] = "no-store"
         return response

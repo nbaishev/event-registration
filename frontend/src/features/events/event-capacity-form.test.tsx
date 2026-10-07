@@ -15,6 +15,7 @@ function setup(handler: (input: RequestInfo | URL, options?: RequestInit) => Res
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (input, options) => {
     if (input === '/api/auth/me') return json(owner);
     if (input === '/api/auth/csrf') return json({ csrf_token: 'test-token' });
+    if (input === `/api/events/${event.id}/stats`) return json({ event_id: event.id, capacity: event.capacity, confirmed: 0, waitlist: 0, checked_in: 0, available_slots: event.capacity });
     return handler(input, options);
   }));
   render(<App client={client} />);
