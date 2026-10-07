@@ -1,7 +1,7 @@
 # Task 12 — Удаление пустого черновика
 
 Started at: `2026-10-07T21:39:13+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-07T22:12:54+06:00`
 
 ## Initial prompt
 
@@ -20,6 +20,8 @@ Execution prompt:
 - 2026-10-07T21:57:21+06:00 — начат независимый review.
 - 2026-10-07T22:03:16+06:00 — первый make verify выявил ошибку E2E assertion; исправлен тест, повторён gate.
 - 2026-10-07T22:07:43+06:00 — make verify GREEN, screenshots проверены, подготовка PR.
+
+- 2026-10-07T22:12:54+06:00 — создан PR #14, remote tree совпал с проверенным local tree; задача завершена.
 
 ## Decisions and deviations
 
@@ -142,4 +144,6 @@ Final verification: evidence в разделе Verification. Независим�
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/14
+
+Remote publication commit: `902f4c14fcbe3bba99125bbbef36fa2c6363e3eb`. Git tree `d651ee7308b609cf01fd3d435629ae766ca6c255` совпал с local `9f36bb7` перед обновлением PR metadata в этом log.
