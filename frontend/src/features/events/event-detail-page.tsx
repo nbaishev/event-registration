@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client';
 import { deleteEvent, eventKeys, getEvent, publishEvent, type EventSummary } from './api';
 import { formatEventTime } from './event-time';
 import { EventStats } from './event-stats';
+import { EventScheduleForm } from './event-schedule-form';
 import { EventCapacityForm } from './event-capacity-form';
 export function EventDetailPage() {
   const ownerId = useOutletContext<string>();
@@ -71,6 +72,7 @@ export function EventDetailPage() {
     <Typography>Количество мест: {event.capacity}</Typography>
     {event.status === 'PUBLISHED' && <Button component={RouterLink} to={`/organizer/events/${event.id}/check-in`}>Check-in</Button>}
     {event.status !== 'DRAFT' && <EventStats ownerId={ownerId} eventId={event.id} />}
+    {event.status === 'PUBLISHED' && <EventScheduleForm key={`schedule-${event.id}`} event={event} />}
     {event.status === 'PUBLISHED' && <EventCapacityForm key={event.id} event={event} />}
     <Typography sx={{ overflowWrap: 'anywhere' }}>Ссылка события: {event.slug}</Typography>
   </Stack></Paper>;

@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from app.events.models import Event
 from app.notifications.contracts import MailMessage
+from app.notifications.transitions import TransitionNotice
 from app.registrations.models import Registration
 from app.registrations.tickets import format_ticket_code
 
@@ -45,5 +46,26 @@ def render_reminder_email(
             f"Окончание: {_local_time(event.ends_at, event.timezone)}\n"
             f"Код билета: {format_ticket_code(registration.ticket_code)}\n"
             f"Страница мероприятия: {app_origin}/events/{event.slug}\n"
+        ),
+    )
+
+
+def render_transition_email(notice: TransitionNotice, app_origin: str) -> MailMessage:
+    rescheduled = notice.kind == "EVENT_RESCHEDULED"
+    return MailMessage(
+        recipient=notice.recipient,
+        subject="Изменение расписания мероприятия"
+        if rescheduled
+        else "Мероприятие отменено",
+        body=(
+            (
+                "Расписание мероприятия изменилось.\n\n"
+                if rescheduled
+                else "Мероприятие отменено.\n\n"
+            )
+            + f"Мероприятие: {notice.title}\n"
+            + f"Начало: {_local_time(notice.starts_at, notice.timezone)}\n"
+            + f"Окончание: {_local_time(notice.ends_at, notice.timezone)}\n"
+            + f"Страница мероприятия: {app_origin}/events/{notice.slug}\n"
         ),
     )

@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth.models import User
 from app.events.models import Event, EventStatus
 from app.registrations.models import Registration, RegistrationStatus
 
@@ -39,3 +40,19 @@ def find_reminder_candidates(
         )
     )
     return [(event_id, registration_id) for event_id, registration_id in rows]
+
+
+def find_transition_recipients(session: Session, event_id: UUID) -> list[str]:
+    """Read the recipient snapshot while the caller holds Event FOR UPDATE."""
+    return list(
+        session.scalars(
+            select(User.email)
+            .join(Registration, Registration.user_id == User.id)
+            .where(
+                Registration.event_id == event_id,
+                Registration.status.in_(
+                    [RegistrationStatus.CONFIRMED, RegistrationStatus.WAITLIST]
+                ),
+            )
+        )
+    )

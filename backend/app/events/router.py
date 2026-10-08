@@ -29,6 +29,10 @@ from app.events.service import (
 )
 from app.events.stats import get_owned_stats
 from app.events.stream import StatsStreamResponse, authorize_stats_stream
+from app.notifications.transitions import (
+    TransitionDispatcher,
+    get_transition_dispatcher,
+)
 
 
 def private_response(response: Response) -> None:
@@ -95,6 +99,9 @@ def stats(event_id: UUID, user: CurrentUser, session: DatabaseSession) -> StatsR
 def patch_event(
     event_id: UUID,
     broadcaster: StatsNotifications,
+    notification_dispatcher: Annotated[
+        TransitionDispatcher, Depends(get_transition_dispatcher)
+    ],
     body: EventPatchRequest,
     user: CurrentUser,
     session: DatabaseSession,
@@ -102,7 +109,13 @@ def patch_event(
 ) -> EventResponse:
     return EventResponse.model_validate(
         patch_owned_event(
-            session, clock, user.id, event_id, body, broadcaster=broadcaster
+            session,
+            clock,
+            user.id,
+            event_id,
+            body,
+            broadcaster=broadcaster,
+            notification_dispatcher=notification_dispatcher,
         )
     )
 

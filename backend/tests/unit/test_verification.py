@@ -72,7 +72,7 @@ def test_verify_runs_integration_without_unit_or_vitest(commands):
             "--grep-invert",
             (
                 "login limiter|event-drafts|event-publish|"
-                "event-registration|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
+                "event-registration|event-reschedule|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
             ),
         ],
         [
@@ -81,7 +81,7 @@ def test_verify_runs_integration_without_unit_or_vitest(commands):
             "--grep",
             (
                 "login limiter|event-drafts|event-publish|"
-                "event-registration|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
+                "event-registration|event-reschedule|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
             ),
         ],
         command_lists[0][:-2] + ["down", "--volumes", "--remove-orphans"],
@@ -167,3 +167,11 @@ def test_verify_ci_smoke_failure_fails_and_cleans_up(commands, monkeypatch):
         verification.verify("verify-ci")
     assert caught.value is error
     assert commands[-1][0][-3:] == ["down", "--volumes", "--remove-orphans"]
+
+
+def test_reschedule_browser_runs_once_and_receives_smtp_sink(commands):
+    verification.verify("verify")
+    browser_calls = [(c, kw) for c, kw in commands if "e2e" in c]
+    assert len(browser_calls) == 2
+    assert "event-reschedule" in browser_calls[1][0][-1]
+    assert browser_calls[1][1]["env"]["MAILPIT_URL"] == "http://127.0.0.1:18025"
