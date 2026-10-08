@@ -2,6 +2,7 @@ import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { ApiError } from '../../api/client';
 import { eventKeys, getEventStats } from './api';
+import { useLiveStats } from './use-live-stats';
 
 function errorMessage(error: unknown): string {
   const code = error instanceof ApiError ? error.code : '';
@@ -21,6 +22,8 @@ export function EventStats({ ownerId, eventId }: { ownerId: string; eventId: str
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const connection = useLiveStats(ownerId, eventId);
+  const connectionLabels = { connecting: 'Подключаемся…', live: 'Обновляется в реальном времени', reconnecting: 'Восстанавливаем соединение…' };
   const metrics = query.data ? [
     ['Вместимость', query.data.capacity],
     ['Подтверждено', query.data.confirmed],
@@ -30,12 +33,13 @@ export function EventStats({ ownerId, eventId }: { ownerId: string; eventId: str
   ] as const : [];
   return <Stack component="section" aria-label="Статистика мероприятия" spacing={2}>
     <Typography component="h2" variant="h6">Статистика мероприятия</Typography>
+    {connection !== 'error' && <Typography role="status" color="text.secondary">{connectionLabels[connection]}</Typography>}
     {query.isPending && <Typography role="status">Загружаем статистику…</Typography>}
     {query.isError && <Stack spacing={1}>
       <Alert severity="error">{errorMessage(query.error)}</Alert>
       <Button disabled={query.isFetching} onClick={() => { void query.refetch(); }}>Повторить</Button>
     </Stack>}
-    {!query.isPending && !query.isError && <Stack direction="row" useFlexGap flexWrap="wrap" spacing={2}>
+    {!query.isPending && query.data && (connection !== 'error' && !(query.error instanceof ApiError && [403, 404, 409].includes(query.error.status))) && <Stack direction="row" useFlexGap flexWrap="wrap" spacing={2}>
       {metrics.map(([label, value]) => <Paper key={label} role="group" aria-label={label} variant="outlined" sx={{ p: 2, flex: '1 1 130px' }}>
         <Typography color="text.secondary" variant="body2">{label}</Typography>
         <Typography variant="h4" component="p">{value}</Typography>

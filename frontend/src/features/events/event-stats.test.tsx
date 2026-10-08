@@ -2,8 +2,10 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { FakeEventSource } from '../../test-utils/event-source';
+
 let App: typeof import('../../app')['App'];
-beforeEach(async () => { vi.resetModules(); App = (await import('../../app')).App; });
+beforeEach(async () => { vi.resetModules(); FakeEventSource.instances = []; vi.stubGlobal('EventSource', FakeEventSource); App = (await import('../../app')).App; });
 afterEach(() => vi.unstubAllGlobals());
 const owner = { id: '00000000-0000-4000-8000-000000000001', email: 'owner@example.com', created_at: '2026-10-04T12:00:00Z', updated_at: '2026-10-04T12:00:00Z' };
 const event = { id: '00000000-0000-4000-8000-000000000002', owner_id: owner.id, title: 'Statistics meetup', description: 'Description', slug: 'statistics-meetup', starts_at: '2030-10-10T12:00:00Z', ends_at: '2030-10-10T14:00:00Z', timezone: 'UTC', capacity: 7, status: 'PUBLISHED', schedule_updated_at: owner.created_at, published_at: owner.created_at as string | null, cancelled_at: null, created_at: owner.created_at, updated_at: owner.created_at };
@@ -113,4 +115,36 @@ it.each([false, true])('isolates owner cache and aborts delayed response after a
   await act(async () => release(json(snapshot)));
   metric('Подтверждено', 0); metric('Вместимость', 9);
   expect(client.getQueryData(['events', second.id, 'stats', event.id])).toEqual({ ...snapshot, capacity: 9, confirmed: 0, waitlist: 0, checked_in: 0, available_slots: 9 });
+});
+
+it('live signal refetches counters without invalidating event details', async () => {
+  let confirmed = 4;
+  const client = setup(() => json({ ...snapshot, confirmed }));
+  await waitFor(() => metric('Подтверждено', 4));
+  expect(FakeEventSource.instances).toHaveLength(1);
+  expect(screen.getByText('Подключаемся…')).toBeVisible();
+  await act(async () => FakeEventSource.instances[0].open());
+  expect(screen.getByText('Обновляется в реальном времени')).toBeVisible();
+  confirmed = 5;
+  await act(async () => FakeEventSource.instances[0].signal());
+  await waitFor(() => metric('Подтверждено', 5));
+  expect(client.getQueryState(detailKey)?.isInvalidated).toBe(false);
+  await act(async () => FakeEventSource.instances[0].fail());
+  expect(screen.getByText('Восстанавливаем соединение…')).toBeVisible();
+  metric('Подтверждено', 5);
+});
+it('terminal reconnect shows access error and a successful manual retry displays snapshot', async () => {
+  let forbidden = false;
+  setup(input => input === '/api/auth/refresh' ? json(owner) : forbidden ? error('EVENT_NOT_OWNER', 403) : json(snapshot));
+  await waitFor(() => metric('Подтверждено', 4));
+  forbidden = true;
+  await act(async () => FakeEventSource.instances[0].fail());
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Нет доступа'), { timeout: 2500 });
+  expect(screen.queryByRole('group', { name: 'Подтверждено' })).not.toBeInTheDocument();
+  forbidden = false;
+  fireEvent.click(screen.getByRole('button', { name: 'Повторить' }));
+  await waitFor(() => metric('Подтверждено', 4));
+  expect(FakeEventSource.instances).toHaveLength(2);
+  await act(async () => FakeEventSource.instances[1].open());
+  expect(screen.getByText('Обновляется в реальном времени')).toBeVisible();
 });
