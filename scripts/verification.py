@@ -23,12 +23,21 @@ def verify(mode: str) -> None:
     environment.update(
         JWT_SECRET=secrets.token_hex(32),
         APP_PORT="0",
+        BACKEND_IMAGE_TAG=uuid.uuid4().hex[:12],
+        REDIS_URL="redis://redis:6379/0",
+        SMTP_HOST="mailpit",
+        SMTP_PORT="1025",
+        SMTP_FROM="tickets@example.com",
+        SMTP_SECURITY="none",
+        SMTP_TIMEOUT_SECONDS="10",
         POSTGRES_DB="foundation_verification",
         POSTGRES_USER="event_registration",
         POSTGRES_PASSWORD="development",
         ENVIRONMENT="test",
         APP_ORIGIN="http://localhost:8080",
     )
+    environment.pop("SMTP_USERNAME", None)
+    environment.pop("SMTP_PASSWORD", None)
     project = "foundation-verify-" + uuid.uuid4().hex[:12]
     compose = [
         "docker",
@@ -78,10 +87,42 @@ def verify(mode: str) -> None:
             environment["APP_PORT"] = address.rsplit(":", 1)[1]
             environment["APP_ORIGIN"] = f"http://{address}"
             run(
-                [*compose, "up", "-d", "--wait", "--wait-timeout", "120", "nginx"],
+                [
+                    *compose,
+                    "up",
+                    "-d",
+                    "--wait",
+                    "--wait-timeout",
+                    "120",
+                    "nginx",
+                    "worker",
+                    "beat",
+                ],
                 env=environment,
             )
             run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
+            if mode == "verify":
+                broker_address = subprocess.check_output(
+                    [*compose, "port", "redis", "6379"],
+                    cwd=ROOT,
+                    env=environment,
+                    text=True,
+                ).strip()
+                sink_address = subprocess.check_output(
+                    [*compose, "port", "mailpit", "8025"],
+                    cwd=ROOT,
+                    env=environment,
+                    text=True,
+                ).strip()
+                run(
+                    [*uv, "python", "scripts/verify_notifications.py"],
+                    env=test_env
+                    | {
+                        "REDIS_URL": f"redis://{broker_address}/0",
+                        "MAILPIT_URL": f"http://{sink_address}",
+                        "APP_ORIGIN": environment["APP_ORIGIN"],
+                    },
+                )
             nginx_id = subprocess.check_output(
                 [*compose, "ps", "-q", "nginx"], cwd=ROOT, env=environment, text=True
             ).strip()

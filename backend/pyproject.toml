@@ -13,6 +13,7 @@ dependencies = [
   "email-validator>=2,<3",
   "pyjwt>=2.10,<3",
   "python-dotenv>=1,<2",
+  "celery[redis]>=5.6,<5.7",
 ]
 [dependency-groups]
 dev = ["pytest>=8,<10", "httpx2>=2,<3", "ruff>=0.9,<1", "mypy>=1.15,<2"]
@@ -27,3 +28,11 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["celery", "celery.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.notifications.tasks"]
+disallow_untyped_decorators = false

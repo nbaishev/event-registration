@@ -14,14 +14,23 @@ services:
       retries: 30
   backend:
     build: ./backend
-    environment:
+    image: event-registration-backend:${BACKEND_IMAGE_TAG:-development}
+    environment: &backend-environment
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       JWT_SECRET: ${JWT_SECRET:?Run make bootstrap or explicitly set JWT_SECRET}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-tickets@example.com}
+      SMTP_SECURITY: ${SMTP_SECURITY:-none}
+      SMTP_TIMEOUT_SECONDS: ${SMTP_TIMEOUT_SECONDS:-10}
       DB_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-event_registration}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-development}
       POSTGRES_DB: ${POSTGRES_DB:-event_registration}
+      SMTP_USERNAME:
+      SMTP_PASSWORD:
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,6 +39,43 @@ services:
       interval: 2s
       timeout: 6s
       retries: 30
+  redis:
+    image: redis:7.4.7-alpine
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  # Development/test SMTP sink. No host SMTP port and no production relay.
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  worker:
+    image: event-registration-backend:${BACKEND_IMAGE_TAG:-development}
+    build: ./backend
+    environment: *backend-environment
+    command: [celery, -A, app.notifications.celery_app:celery_app, worker, --loglevel=INFO, --concurrency=2]
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+  beat:
+    image: event-registration-backend:${BACKEND_IMAGE_TAG:-development}
+    build: ./backend
+    environment: *backend-environment
+    command: [celery, -A, app.notifications.celery_app:celery_app, beat, --loglevel=INFO, --schedule=/tmp/celerybeat-schedule]
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   frontend:
     build: ./frontend
   nginx:
