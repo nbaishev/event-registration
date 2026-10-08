@@ -18,6 +18,12 @@ from app.events.schemas import (
     EventPatchRequest,
     PublicEventResponse,
 )
+from app.notifications.repository import find_transition_recipients
+from app.notifications.transitions import (
+    TransitionDispatcher,
+    TransitionNotice,
+    dispatch_transition_notices,
+)
 
 
 def generate_slug(title: str) -> str:
@@ -83,6 +89,7 @@ def patch_owned_event(
     body: EventPatchRequest,
     *,
     broadcaster: StatsBroadcaster | None = None,
+    notification_dispatcher: TransitionDispatcher | None = None,
 ) -> Event:
     event = repository.find_event_for_update(session, event_id)
     if event is None:
@@ -91,9 +98,56 @@ def patch_owned_event(
         raise AppError(403, "EVENT_NOT_OWNER", "You do not own this event.")
     if event.status == EventStatus.PUBLISHED:
         try:
+            schedule_fields = {"starts_at", "ends_at", "timezone"}
+            if body.model_fields_set and body.model_fields_set <= schedule_fields:
+                now = clock.now()
+                if event.starts_at <= now:
+                    raise AppError(
+                        409, "EVENT_ALREADY_STARTED", "Event has already started."
+                    )
+                supplied = body.model_dump(exclude_unset=True)
+                starts = supplied.get("starts_at", event.starts_at)
+                ends = supplied.get("ends_at", event.ends_at)
+                if starts <= now or ends <= starts:
+                    raise AppError(
+                        422,
+                        "VALIDATION_ERROR",
+                        "Schedule must be a future valid interval.",
+                    )
+                changes = {
+                    key: value
+                    for key, value in supplied.items()
+                    if getattr(event, key) != value
+                }
+                if not changes:
+                    session.rollback()
+                    return event
+                for key, value in changes.items():
+                    setattr(event, key, value)
+                event.schedule_updated_at = event.updated_at = now
+                session.flush()
+                notices = [
+                    TransitionNotice(
+                        kind="EVENT_RESCHEDULED",
+                        event_id=event.id,
+                        occurred_at=now,
+                        recipient=email,
+                        title=event.title,
+                        slug=event.slug,
+                        starts_at=event.starts_at,
+                        ends_at=event.ends_at,
+                        timezone=event.timezone,
+                    )
+                    for email in find_transition_recipients(session, event.id)
+                ]
+                session.commit()
+                dispatch_transition_notices(notification_dispatcher, notices)
+                return event
             if body.model_fields_set != {"capacity"}:
                 raise AppError(
-                    409, "EVENT_NOT_EDITABLE", "Only published capacity can be edited."
+                    409,
+                    "EVENT_NOT_EDITABLE",
+                    "Published changes must contain capacity or schedule fields only.",
                 )
             assert body.capacity is not None
             if body.capacity == event.capacity:

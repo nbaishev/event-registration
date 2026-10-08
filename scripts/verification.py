@@ -131,15 +131,22 @@ def verify(mode: str) -> None:
                     env=environment,
                     text=True,
                 ).strip()
+                browser_sink_address = subprocess.check_output(
+                    [*compose, "port", "mailpit", "8025"],
+                    cwd=ROOT,
+                    env=environment,
+                    text=True,
+                ).strip()
                 browser_env = environment | {
                     "E2E_BASE_URL": f"http://{address}",
+                    "MAILPIT_URL": f"http://{browser_sink_address}",
                     "E2E_NGINX_CONTAINER": nginx_id,
                 }
                 # Keep the CI auth order; the automatic fixture resets the isolated
                 # Nginx before every test, including consecutive tests in one file.
                 event_groups = (
                     "login limiter|event-drafts|event-publish|"
-                    "event-registration|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
+                    "event-registration|event-reschedule|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
                 )
                 run(
                     [*pnpm, "e2e", "--grep-invert", event_groups],

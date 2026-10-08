@@ -107,3 +107,22 @@ def send_reminder(event_id: str, registration_id: str) -> bool:
             registration_uuid,
         )
         raise NotificationTaskFailure("reminder delivery failed") from None
+
+
+@celery_app.task(
+    name="notifications.send_transition_notice",
+    max_retries=0,
+    throws=(NotificationTaskFailure,),
+)
+def send_transition_notice(payload: dict[str, str]) -> None:
+    from app.notifications.rendering import render_transition_email
+    from app.notifications.transitions import TransitionNotice
+
+    try:
+        notice = TransitionNotice.model_validate(payload)
+        config = get_settings()
+        SmtpMailSender(config).send(render_transition_email(notice, config.app_origin))
+    except Exception:
+        # Never expose the payload or SMTP exception to worker logs.
+        logger.error("transition delivery failed")
+        raise NotificationTaskFailure("transition delivery failed") from None
