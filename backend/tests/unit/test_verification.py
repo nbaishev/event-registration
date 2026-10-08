@@ -52,7 +52,7 @@ def test_verify_runs_integration_without_unit_or_vitest(commands):
             "--grep-invert",
             (
                 "login limiter|event-drafts|event-publish|"
-                "event-registration|my-registrations|check-in|organizer-stats"
+                "event-registration|my-registrations|check-in|organizer-stats|stats-stream"
             ),
         ],
         [
@@ -61,7 +61,7 @@ def test_verify_runs_integration_without_unit_or_vitest(commands):
             "--grep",
             (
                 "login limiter|event-drafts|event-publish|"
-                "event-registration|my-registrations|check-in|organizer-stats"
+                "event-registration|my-registrations|check-in|organizer-stats|stats-stream"
             ),
         ],
         command_lists[0][:-2] + ["down", "--volumes", "--remove-orphans"],

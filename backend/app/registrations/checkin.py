@@ -8,6 +8,7 @@ from app.auth.models import User
 from app.common.clock import Clock
 from app.common.errors import AppError
 from app.events import repository as events
+from app.events.broadcaster import StatsBroadcaster, publish_stats_changed
 from app.events.models import EventStatus
 from app.registrations import repository
 from app.registrations.schemas import CheckInParticipant, CheckInResponse
@@ -15,7 +16,13 @@ from app.registrations.tickets import format_ticket_code
 
 
 def check_in(
-    session: Session, clock: Clock, owner_id: UUID, event_id: UUID, ticket_code: str
+    session: Session,
+    clock: Clock,
+    owner_id: UUID,
+    event_id: UUID,
+    ticket_code: str,
+    *,
+    broadcaster: StatsBroadcaster | None = None,
 ) -> CheckInResponse:
     try:
         event = events.find_event_for_share(session, event_id)
@@ -52,6 +59,7 @@ def check_in(
             ),
         )
         session.commit()
+        publish_stats_changed(broadcaster, event_id)
         return response
     except SQLAlchemyError:
         session.rollback()

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.common.clock import Clock
 from app.common.errors import AppError
 from app.events import repository
+from app.events.broadcaster import StatsBroadcaster, publish_stats_changed
 from app.events.models import Event, EventStatus
 from app.events.schemas import (
     EventCreateRequest,
@@ -80,6 +81,8 @@ def patch_owned_event(
     owner_id: UUID,
     event_id: UUID,
     body: EventPatchRequest,
+    *,
+    broadcaster: StatsBroadcaster | None = None,
 ) -> Event:
     event = repository.find_event_for_update(session, event_id)
     if event is None:
@@ -98,6 +101,7 @@ def patch_owned_event(
                 return event
             patch_published_capacity(session, event, clock.now(), body.capacity)
             session.commit()
+            publish_stats_changed(broadcaster, event_id)
             return event
         except SQLAlchemyError:
             session.rollback()

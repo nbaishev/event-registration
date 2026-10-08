@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.common.clock import Clock
 from app.common.errors import AppError
 from app.events import repository as events
+from app.events.broadcaster import StatsBroadcaster, publish_stats_changed
 from app.events.models import EventStatus
 from app.registrations import repository, tickets
 from app.registrations.models import Registration, RegistrationStatus
@@ -54,7 +55,12 @@ def confirm_registration(
 
 
 def register_for_event(
-    session: Session, clock: Clock, user_id: UUID, event_id: UUID
+    session: Session,
+    clock: Clock,
+    user_id: UUID,
+    event_id: UUID,
+    *,
+    broadcaster: StatsBroadcaster | None = None,
 ) -> RegistrationResponse:
     try:
         event = events.find_event_for_update(session, event_id)
@@ -97,6 +103,7 @@ def register_for_event(
         response = repository.read_snapshot(session, event_id, user_id)
         assert response is not None
         session.commit()
+        publish_stats_changed(broadcaster, event_id)
         return response
     except AppError:
         session.rollback()
@@ -122,7 +129,12 @@ def get_my_registration(
 
 
 def cancel_registration(
-    session: Session, clock: Clock, user_id: UUID, event_id: UUID
+    session: Session,
+    clock: Clock,
+    user_id: UUID,
+    event_id: UUID,
+    *,
+    broadcaster: StatsBroadcaster | None = None,
 ) -> RegistrationResponse:
     from app.registrations.promotion import fill_available_slots
 
@@ -156,6 +168,7 @@ def cancel_registration(
         response = repository.read_snapshot(session, event_id, user_id)
         assert response is not None
         session.commit()
+        publish_stats_changed(broadcaster, event_id)
         return response
     except SQLAlchemyError:
         session.rollback()

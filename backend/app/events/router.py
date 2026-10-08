@@ -2,12 +2,14 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response
+from fastapi.responses import StreamingResponse
 
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
 from app.common.clock import Clock, get_clock
 from app.common.errors import ErrorResponse
 from app.db.session import DatabaseSession
+from app.events.broadcaster import StatsNotifications
 from app.events.schemas import (
     EventCreateRequest,
     EventPatchRequest,
@@ -26,6 +28,7 @@ from app.events.service import (
     publish_owned_event,
 )
 from app.events.stats import get_owned_stats
+from app.events.stream import StatsStreamResponse, authorize_stats_stream
 
 
 def private_response(response: Response) -> None:
@@ -91,13 +94,16 @@ def stats(event_id: UUID, user: CurrentUser, session: DatabaseSession) -> StatsR
 )
 def patch_event(
     event_id: UUID,
+    broadcaster: StatsNotifications,
     body: EventPatchRequest,
     user: CurrentUser,
     session: DatabaseSession,
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> EventResponse:
     return EventResponse.model_validate(
-        patch_owned_event(session, clock, user.id, event_id, body)
+        patch_owned_event(
+            session, clock, user.id, event_id, body, broadcaster=broadcaster
+        )
     )
 
 
@@ -141,3 +147,19 @@ def public_detail(
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> PublicEventResponse:
     return get_public_event(session, clock, slug)
+
+
+@router.get(
+    "/{event_id}/stats/stream",
+    response_class=StreamingResponse,
+    responses={
+        200: {"content": {"text/event-stream": {"schema": {"type": "string"}}}},
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+    },
+)
+async def stats_stream(
+    event_id: Annotated[UUID, Depends(authorize_stats_stream)],
+    broadcaster: StatsNotifications,
+) -> StreamingResponse:
+    return StatsStreamResponse(broadcaster, event_id)

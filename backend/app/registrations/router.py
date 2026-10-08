@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from app.common.clock import Clock, get_clock
 from app.common.errors import ErrorResponse
 from app.db.session import DatabaseSession
+from app.events.broadcaster import StatsNotifications
 from app.events.router import CurrentUser, private_response
 from app.registrations.checkin import check_in
 from app.registrations.read_service import list_my_registrations
@@ -36,11 +37,14 @@ router = APIRouter(
 )
 def register(
     event_id: UUID,
+    broadcaster: StatsNotifications,
     user: CurrentUser,
     session: DatabaseSession,
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> RegistrationResponse:
-    return register_for_event(session, clock, user.id, event_id)
+    return register_for_event(
+        session, clock, user.id, event_id, broadcaster=broadcaster
+    )
 
 
 @router.get("/{event_id}/my-registration", response_model=RegistrationResponse)
@@ -53,11 +57,14 @@ def own(
 @router.delete("/{event_id}/registration", response_model=RegistrationResponse)
 def cancel(
     event_id: UUID,
+    broadcaster: StatsNotifications,
     user: CurrentUser,
     session: DatabaseSession,
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> RegistrationResponse:
-    return cancel_registration(session, clock, user.id, event_id)
+    return cancel_registration(
+        session, clock, user.id, event_id, broadcaster=broadcaster
+    )
 
 
 me_router = APIRouter(
@@ -80,9 +87,12 @@ def mine(
 @router.post("/{event_id}/check-ins", response_model=CheckInResponse)
 def check_in_ticket(
     event_id: UUID,
+    broadcaster: StatsNotifications,
     body: CheckInRequest,
     user: CurrentUser,
     session: DatabaseSession,
     clock: Annotated[Clock, Depends(get_clock)],
 ) -> CheckInResponse:
-    return check_in(session, clock, user.id, event_id, body.ticket_code)
+    return check_in(
+        session, clock, user.id, event_id, body.ticket_code, broadcaster=broadcaster
+    )
