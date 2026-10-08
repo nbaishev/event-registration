@@ -1,7 +1,7 @@
 # Task 17 — Confirmation / Ticket Email
 
 Started at: `2026-10-08T18:11:23+06:00`
-Finished at: `2026-10-08T18:31:10+06:00` (implementation и verification; публикация PR далее)
+Finished at: `2026-10-08T18:34:32+06:00`
 
 ## Initial prompt
 
@@ -18,6 +18,7 @@ Execution prompt:
 - 2026-10-08T18:24:38+06:00 — финальный gate выполняет unit/frontend checks после review fixes.
 - 2026-10-08T18:29:13+06:00 — broker → worker → SMTP smoke успешен; Playwright выполняется.
 - 2026-10-08T18:31:10+06:00 — `make verify` exit 0, isolated stack/volumes удалены.
+- 2026-10-08T18:34:32+06:00 — создан PR #20 через GitHub connector.
 
 ## Decisions and deviations
 
@@ -86,4 +87,9 @@ Final verification: evidence выше. После gate код/configuration не
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/20
+
+Merge не выполнялся. Worktree сохранён.
+
+Shell GitHub auth отсутствует, поэтому remote commit создан через connector: remote implementation `d1bb082d4d1a263702ed6f2febb328f39a76048c`, local implementation `b886e02`; tree SHA совпадает (`21e38bee15fc66d90911b1d6a154af5963fc2488`). Commit metadata различается; при дальнейшем shell push нужен authenticated fetch и согласование branch history. Завершающий docs-only commit фиксирует этот журнал в обоих checkout/PR.
+
