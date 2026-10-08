@@ -1,7 +1,7 @@
 # Task 16 — Live dashboard and reconnect
 
 Started at: `2026-10-08T17:01:53+06:00`
-Finished at: `IN PROGRESS`
+Finished at: `2026-10-08T17:41:31+06:00`
 
 ## Initial prompt
 
@@ -76,7 +76,9 @@ Final verification: см. Successful final gate ниже.
 
 ## Pull Request
 
-Not created yet. Публикация остановлена после automatic approval rejection.
+https://github.com/nbaishev/event-registration/pull/19
+
+Публикация завершена после явного подтверждения пользователя. Ниже сохранена история блокировки.
 
 Rejected action: GitHub `create_tree`, 11 scoped source/documentation files → `nbaishev/event-registration`, planned branch `feat/live-dashboard`, PR base `master`.
 Reason: user authorized local implementation but did not explicitly authorize exporting payload to that destination. Обход не выполнялся. Требуется явное разрешение пользователя для публикации этих 11 файлов и создания PR.
@@ -138,3 +140,9 @@ Screenshots: `.verification/live-dashboard-desktop.png`, `live-dashboard-mobile.
 ### Publication retry
 
 - 2026-10-08T17:40:09+06:00 — пользователь: «Сделай PR». Повторный GitHub create_tree отклонён automatic approval review: команда создания PR не признана явным разрешением экспорта 11 source/documentation files в конкретный repository. Обход не выполнялся. Требуется explicit payload/destination authorization. Code/configuration не менялись, make verify не повторялся.
+
+### Publication completed
+
+- 2026-10-08T17:41:31+06:00 — пользователь подтвердил explicit payload/destination authorization; 11 файлов опубликованы в `nbaishev/event-registration`, branch `feat/live-dashboard`, PR #19 → master.
+- Remote implementation tree `c92800cd1d71f1b395be105a381bfc5b05010082` совпадает с local verified tree; remote commit `3acc1256284b05c66b3f2dda9f3218d7c4dcfad8`.
+- Code/configuration после успешного make verify не менялись. Worktree сохранён для PR review; master не менялся.
