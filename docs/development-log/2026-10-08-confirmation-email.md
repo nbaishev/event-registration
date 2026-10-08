@@ -92,4 +92,3 @@ https://github.com/nbaishev/event-registration/pull/20
 Merge не выполнялся. Worktree сохранён.
 
 Shell GitHub auth отсутствует, поэтому remote commit создан через connector: remote implementation `d1bb082d4d1a263702ed6f2febb328f39a76048c`, local implementation `b886e02`; tree SHA совпадает (`21e38bee15fc66d90911b1d6a154af5963fc2488`). Commit metadata различается; при дальнейшем shell push нужен authenticated fetch и согласование branch history. Завершающий docs-only commit фиксирует этот журнал в обоих checkout/PR.
-
