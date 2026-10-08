@@ -19,6 +19,7 @@ def run(
 
 
 def verify(mode: str) -> None:
+    full_checks = mode in {"verify", "verify-ci"}
     environment = os.environ.copy()
     environment.update(
         JWT_SECRET=secrets.token_hex(32),
@@ -68,10 +69,10 @@ def verify(mode: str) -> None:
         if mode == "test":
             run([*uv, "pytest", "backend/tests", "-q"], env=test_env)
             run([*pnpm, "test"], cwd=ROOT / "frontend", env=environment)
-        elif mode == "verify":
+        elif full_checks:
             run([*uv, "pytest", "backend/tests/integration", "-q"], env=test_env)
-        if mode in {"e2e", "verify"}:
-            if mode == "verify":
+        if mode == "e2e" or full_checks:
+            if full_checks:
                 run([*uv, "python", "scripts/verify_migrations.py"], env=test_env)
                 run([*pnpm, "build"], cwd=ROOT / "frontend", env=environment)
             run([*compose, "build", "backend", "frontend"], env=environment)
@@ -101,7 +102,7 @@ def verify(mode: str) -> None:
                 env=environment,
             )
             run([*compose, "exec", "-T", "nginx", "nginx", "-t"], env=environment)
-            if mode == "verify":
+            if full_checks:
                 broker_address = subprocess.check_output(
                     [*compose, "port", "redis", "6379"],
                     cwd=ROOT,
@@ -123,29 +124,33 @@ def verify(mode: str) -> None:
                         "APP_ORIGIN": environment["APP_ORIGIN"],
                     },
                 )
-            nginx_id = subprocess.check_output(
-                [*compose, "ps", "-q", "nginx"], cwd=ROOT, env=environment, text=True
-            ).strip()
-            browser_env = environment | {
-                "E2E_BASE_URL": f"http://{address}",
-                "E2E_NGINX_CONTAINER": nginx_id,
-            }
-            # Keep the CI auth order; the automatic fixture resets the isolated
-            # Nginx before every test, including consecutive tests in one file.
-            event_groups = (
-                "login limiter|event-drafts|event-publish|"
-                "event-registration|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
-            )
-            run(
-                [*pnpm, "e2e", "--grep-invert", event_groups],
-                cwd=ROOT / "frontend",
-                env=browser_env,
-            )
-            run(
-                [*pnpm, "e2e", "--grep", event_groups],
-                cwd=ROOT / "frontend",
-                env=browser_env,
-            )
+            if mode != "verify-ci":
+                nginx_id = subprocess.check_output(
+                    [*compose, "ps", "-q", "nginx"],
+                    cwd=ROOT,
+                    env=environment,
+                    text=True,
+                ).strip()
+                browser_env = environment | {
+                    "E2E_BASE_URL": f"http://{address}",
+                    "E2E_NGINX_CONTAINER": nginx_id,
+                }
+                # Keep the CI auth order; the automatic fixture resets the isolated
+                # Nginx before every test, including consecutive tests in one file.
+                event_groups = (
+                    "login limiter|event-drafts|event-publish|"
+                    "event-registration|my-registrations|check-in|organizer-stats|stats-stream|live-dashboard"
+                )
+                run(
+                    [*pnpm, "e2e", "--grep-invert", event_groups],
+                    cwd=ROOT / "frontend",
+                    env=browser_env,
+                )
+                run(
+                    [*pnpm, "e2e", "--grep", event_groups],
+                    cwd=ROOT / "frontend",
+                    env=browser_env,
+                )
         print(f"{mode}: passed (isolated project {project}).")
     finally:
         # Only this invocation's unique project/volumes may be removed.
@@ -154,6 +159,6 @@ def verify(mode: str) -> None:
 
 if __name__ == "__main__":
     mode = sys.argv[1]
-    if mode not in {"test", "e2e", "verify"}:
-        raise SystemExit("Expected test, e2e or verify")
+    if mode not in {"test", "e2e", "verify", "verify-ci"}:
+        raise SystemExit("Expected test, e2e, verify or verify-ci")
     verify(mode)

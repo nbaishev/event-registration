@@ -2,7 +2,7 @@ PNPM ?= corepack pnpm
 export PNPM
 UV = uv run --frozen --project backend
 
-.PHONY: bootstrap up down migrate api-generate test check e2e verify
+.PHONY: bootstrap up down migrate api-generate test check e2e verify verify-ci
 bootstrap:
 	uv sync --frozen --project backend
 	$(UV) python scripts/bootstrap.py
@@ -30,3 +30,6 @@ e2e:
 	python3 scripts/verification.py e2e
 verify: check
 	python3 scripts/verification.py verify
+
+verify-ci: check
+	python3 scripts/verification.py verify-ci

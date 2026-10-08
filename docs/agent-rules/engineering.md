@@ -388,7 +388,11 @@ Unit tests в этом gate не требуют PostgreSQL или Compose. Пр�
 backend + frontend test suite, но не является обязательным промежуточным шагом
 перед review.
 
-CI запускает тот же `make verify`. Day 1 Foundation task создаёт реализацию этих команд; до неё команды отсутствуют. Состав gates хранится только здесь, планы ссылаются на этот раздел.
+CI разделяет этот gate на два независимых обязательных job: `verify` запускает
+`make verify-ci` (все проверки `make verify`, кроме Playwright), а `e2e` запускает
+`make e2e`. Chromium устанавливается только в job `e2e`. Локальный `make verify`
+сохраняет полный gate, включая Playwright. Состав gates хранится только здесь,
+планы ссылаются на этот раздел.
 
 ---
 

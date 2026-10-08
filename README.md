@@ -139,7 +139,7 @@ cd frontend && corepack pnpm exec playwright install --with-deps chromium
 
 На Linux установка системных зависимостей браузера может требовать sudo.
 Для запуска backend/frontend и `make check` браузер не нужен. CI устанавливает
-его отдельным шагом.
+его отдельным шагом только в job `e2e`.
 
 ```bash
 make check          # быстрый development gate, без Docker/PostgreSQL
@@ -150,7 +150,9 @@ make api-generate   # regenerate TypeScript из FastAPI OpenAPI
 ```
 
 Точный состав gates: [engineering rules](docs/agent-rules/engineering.md#состав-quality-gates).
-CI выполняет тот же `make verify` для PR в master. Test/verify/e2e создают уникальные
+CI для PR в master запускает два независимых job: `verify` (`make verify-ci`,
+все non-browser gates) и `e2e` (`make e2e`, Playwright). Локальный `make verify`
+по-прежнему выполняет полный gate. Test/verify/e2e создают уникальные
 Compose projects с отдельной database, dynamic localhost ports и удаляют только
 свои контейнеры/volumes, в том числе при failure. Development volume не очищается.
 Миграционная проверка отказывается работать с непустой test DB.
