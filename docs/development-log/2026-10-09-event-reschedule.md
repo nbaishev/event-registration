@@ -88,3 +88,9 @@ Corrective prompt:
 Разрешаю
 
 2026-10-09T00:07:00+05:00 — пользователь явно разрешил загрузить код и screenshots в `nbaishev/event-registration` и создать PR в `master`. Предыдущий automatic rejection относится к попытке до этого authorization. Implementation/config не менялись после успешного make verify; повтор gate не требуется.
+
+## Published PR
+
+2026-10-09T00:08:29+05:00 — создан PR #22: https://github.com/nbaishev/event-registration/pull/22
+
+`feat/event-reschedule` → `master`. Код и оба screenshots опубликованы после явного authorization; remote tree `ffd511a752108ae03e7d5d6d205caf4c76dd94d4` совпал с локальным tree. Прежняя блокировка разрешена. Implementation/config после успешного make verify не менялись. Worktree сохранён для review feedback.
