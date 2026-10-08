@@ -29,3 +29,21 @@ def render_ticket_email(
             f"Страница мероприятия: {app_origin}/events/{event.slug}\n"
         ),
     )
+
+
+def render_reminder_email(
+    recipient: str, event: Event, registration: Registration, app_origin: str
+) -> MailMessage:
+    assert registration.ticket_code is not None
+    return MailMessage(
+        recipient=recipient,
+        # Event title is untrusted text and belongs only in the MIME body.
+        subject="Напоминание о мероприятии — ваш билет",
+        body=(
+            f"Напоминаем о предстоящем мероприятии.\n\nМероприятие: {event.title}\n"
+            f"Начало: {_local_time(event.starts_at, event.timezone)}\n"
+            f"Окончание: {_local_time(event.ends_at, event.timezone)}\n"
+            f"Код билета: {format_ticket_code(registration.ticket_code)}\n"
+            f"Страница мероприятия: {app_origin}/events/{event.slug}\n"
+        ),
+    )

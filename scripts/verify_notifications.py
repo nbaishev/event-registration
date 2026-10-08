@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from app.auth.models import User
 from app.common.clock import SystemClock
 from app.events.models import Event
-from app.notifications.tasks import scan_confirmation
+from app.notifications.tasks import scan_confirmation, scan_reminder
 from app.registrations.models import Registration
 from app.registrations.tickets import generate_ticket_code
 
@@ -31,13 +31,21 @@ def sink_json(path: str) -> Any:
         return json.load(response)
 
 
-def verify_notifications() -> None:
+def verify_notifications(kind: str = "confirmation") -> None:
     engine = create_engine(os.environ["TEST_DATABASE_URL"], hide_parameters=True)
     owner_id, user_id, event_id, registration_id = (uuid4() for _ in range(4))
     recipient = f"notification-smoke-{user_id}@example.com"
     ticket = generate_ticket_code()
     formatted = f"{ticket[:4]}-{ticket[4:8]}-{ticket[8:]}"
     now = SystemClock().now()
+    reminder = kind == "reminder"
+    starts = now + timedelta(hours=23) if reminder else now + timedelta(days=2)
+    cutoff = starts - timedelta(hours=24)
+    subject = (
+        "Напоминание о мероприятии — ваш билет"
+        if reminder
+        else "Подтверждение регистрации — ваш билет"
+    )
     slug = f"notification-smoke-{event_id}"
     message_ids: list[str] = []
     try:
@@ -65,13 +73,13 @@ def verify_notifications() -> None:
                     title="Проверка доставки билета",
                     description="",
                     slug=slug,
-                    starts_at=now + timedelta(days=2),
-                    ends_at=now + timedelta(days=2, hours=2),
+                    starts_at=starts,
+                    ends_at=starts + timedelta(hours=2),
                     timezone="Asia/Bishkek",
                     capacity=1,
                     status="PUBLISHED",
-                    schedule_updated_at=now,
-                    published_at=now,
+                    schedule_updated_at=cutoff,
+                    published_at=cutoff,
                     created_at=now,
                     updated_at=now,
                 )
@@ -83,16 +91,18 @@ def verify_notifications() -> None:
                     event_id=event_id,
                     user_id=user_id,
                     status="CONFIRMED",
-                    confirmed_at=now,
+                    confirmed_at=cutoff,
                     ticket_code=ticket,
-                    ticket_issued_at=now,
+                    ticket_issued_at=cutoff,
+                    confirmation_email_sent_at=now if reminder else None,
                     created_at=now,
                     updated_at=now,
                 )
             )
             session.commit()
         # Scanner is executed by the actual worker; eager mode is never enabled.
-        scan_confirmation.delay()
+        scanner = scan_reminder if reminder else scan_confirmation
+        scanner.delay()
         deadline = time.monotonic() + 45
         received: dict[str, Any] | None = None
         sent = False
@@ -103,20 +113,28 @@ def verify_notifications() -> None:
                     received = sink_json(f"/api/v1/message/{message['ID']}")
             with Session(engine) as session:
                 row = session.get(Registration, registration_id)
-                sent = row is not None and row.confirmation_email_sent_at is not None
+                sent = (
+                    row is not None
+                    and (
+                        row.reminder_sent_at
+                        if reminder
+                        else row.confirmation_email_sent_at
+                    )
+                    is not None
+                )
             if received is not None and sent:
                 break
             time.sleep(0.2)  # Bounded readiness polling, not a business time assertion.
         if received is None or not sent:
             raise RuntimeError("Notification broker/worker/SMTP smoke timed out")
-        assert received["Subject"] == "Подтверждение регистрации — ваш билет"
+        assert received["Subject"] == subject
         assert "Проверка доставки билета" in received["Text"]
         assert formatted in received["Text"]
         assert f"{os.environ['APP_ORIGIN']}/events/{slug}" in received["Text"]
         assert "Asia/Bishkek" in received["Text"] and "UTC+06:00" in received["Text"]
         assert received["HTML"] == ""
         print(
-            "Notification smoke: real broker, worker, SMTP, ticket and committed timestamp passed."
+            f"Notification {kind} smoke: real broker, worker, SMTP, ticket and committed timestamp passed."
         )
     finally:
         # Delete only this smoke's rows; it runs before browser scenarios.
@@ -140,3 +158,4 @@ def verify_notifications() -> None:
 
 if __name__ == "__main__":
     verify_notifications()
+    verify_notifications("reminder")

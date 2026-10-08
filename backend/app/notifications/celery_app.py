@@ -17,6 +17,10 @@ celery_app.conf.update(
             "task": "notifications.scan_confirmation",
             "schedule": 300.0,
         },
+        "reminder-scan": {
+            "task": "notifications.scan_reminder",
+            "schedule": 300.0,
+        },
     },
     timezone="UTC",
     broker_connection_retry_on_startup=True,

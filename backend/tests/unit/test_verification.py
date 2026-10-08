@@ -138,3 +138,32 @@ def test_final_origin_reaches_worker_and_beat_before_smoke(commands):
         and command[-1] != "postgres"
     )
     assert set(final_start[0][-3:]) == {"nginx", "worker", "beat"}
+
+
+def test_verify_ci_runs_all_non_browser_gates(commands):
+    verification.verify("verify-ci")
+    command_lists = [command for command, _ in commands]
+    assert python_suites(commands) == [["pytest", "backend/tests/integration", "-q"]]
+    assert ["pnpm", "build"] in command_lists
+    assert any(c[-1] == "scripts/verify_migrations.py" for c in command_lists)
+    assert any(c[-3:] == ["build", "backend", "frontend"] for c in command_lists)
+    assert any(c[-5:] == ["exec", "-T", "nginx", "nginx", "-t"] for c in command_lists)
+    assert sum(c[-1] == "scripts/verify_notifications.py" for c in command_lists) == 1
+    assert not any("e2e" in c for c in command_lists)
+    assert command_lists[-1][-3:] == ["down", "--volumes", "--remove-orphans"]
+
+
+def test_verify_ci_smoke_failure_fails_and_cleans_up(commands, monkeypatch):
+    error = subprocess.CalledProcessError(19, ["smtp-smoke"])
+    original = verification.run
+
+    def fail_smoke(command, **kwargs):
+        if command[-1] == "scripts/verify_notifications.py":
+            raise error
+        original(command, **kwargs)
+
+    monkeypatch.setattr(verification, "run", fail_smoke)
+    with pytest.raises(subprocess.CalledProcessError) as caught:
+        verification.verify("verify-ci")
+    assert caught.value is error
+    assert commands[-1][0][-3:] == ["down", "--volumes", "--remove-orphans"]

@@ -22,3 +22,20 @@ def find_confirmation_candidates(
         )
     )
     return [(event_id, registration_id) for event_id, registration_id in rows]
+
+
+def find_reminder_candidates(
+    session: Session, now: datetime
+) -> list[tuple[UUID, UUID]]:
+    from app.notifications.eligibility import reminder_conditions
+
+    rows = session.execute(
+        select(Event.id, Registration.id)
+        .join(Registration, Registration.event_id == Event.id)
+        .where(
+            *reminder_conditions(
+                Event, Registration, now, Registration.reminder_sent_at.is_(None)
+            )
+        )
+    )
+    return [(event_id, registration_id) for event_id, registration_id in rows]
