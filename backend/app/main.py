@@ -19,6 +19,7 @@ from app.common.errors import (
 )
 from app.common.readiness import database_is_ready
 from app.db.session import DatabaseSession
+from app.events.broadcaster import StatsBroadcaster
 from app.events.router import public_router
 from app.events.router import router as events_router
 from app.registrations.router import me_router
@@ -36,7 +37,13 @@ class ReadinessResponse(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     get_settings().validate_startup()
-    yield
+    broadcaster = StatsBroadcaster()
+    broadcaster.startup()
+    app.state.stats_broadcaster = broadcaster
+    try:
+        yield
+    finally:
+        broadcaster.shutdown()
 
 
 app = FastAPI(

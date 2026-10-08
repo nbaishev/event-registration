@@ -58,7 +58,7 @@ class AuthSecurityMiddleware(BaseHTTPMiddleware):
         stats_request = (
             request.method == "GET"
             and request.url.path.startswith("/api/events/")
-            and request.url.path.rstrip("/").endswith("/stats")
+            and request.url.path.rstrip("/").endswith(("/stats", "/stats/stream"))
         )
         if (
             request.url.path.startswith(("/api/auth/", "/api/me/"))
