@@ -114,3 +114,7 @@ Exit code: `0`
 Actual result: `304 passed in 5.79s` backend unit; `170 passed (170)` frontend; `301 passed in 141.03s (0:02:21)` PostgreSQL integration; migrations/head/metadata drift, production/Docker builds, Compose/nginx passed; confirmation/reminder real SMTP smokes passed; E2E `12 passed (25.2s)` + `12 passed (51.9s)`; `verify: passed (isolated project foundation-verify-89c70810c372)`. Cleanup succeeded. No implementation/config changes after this gate.
 
 Combined staged secrets review: only the 18 scoped task files; no secret files/private keys/token patterns. Publishing one PR to master per explicit user instruction.
+
+2026-10-09T00:24:37+06:00 — создан общий PR #21: https://github.com/nbaishev/event-registration/pull/21
+
+Branch: `feat/reminder-email-ci` → `master`. GitHub connector опубликовал единый commit обеих задач; tree SHA `17adda77485423995ef70cad2d4b010c39ccb472` совпал с локальным проверенным tree. Старые заметки о blocked upload относятся к предыдущим попыткам: после явного user authorization публикация успешна.
