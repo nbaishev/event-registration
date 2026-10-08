@@ -1,5 +1,4 @@
 import subprocess
-from unittest.mock import Mock
 
 import pytest
 from scripts import verification
@@ -11,14 +10,24 @@ def commands(monkeypatch):
     calls = []
 
     def record(command, **kwargs):
-        calls.append((command, kwargs))
+        calls.append((command, kwargs | {"env": kwargs["env"].copy()}))
 
     monkeypatch.setattr(verification.subprocess, "run", record)
-    monkeypatch.setattr(
-        verification.subprocess,
-        "check_output",
-        Mock(side_effect=["127.0.0.1:15432\n", "127.0.0.1:18080\n", "nginx-id\n"]),
-    )
+
+    def output(command, **kwargs):
+        if command[-3:] == ["port", "postgres", "5432"]:
+            return "127.0.0.1:15432\n"
+        if command[-3:] == ["port", "nginx", "80"]:
+            return "127.0.0.1:18080\n"
+        if command[-3:] == ["port", "redis", "6379"]:
+            return "127.0.0.1:16379\n"
+        if command[-3:] == ["port", "mailpit", "8025"]:
+            return "127.0.0.1:18025\n"
+        if command[-3:] == ["ps", "-q", "nginx"]:
+            return "nginx-id\n"
+        raise AssertionError(f"Unexpected subprocess output: {command}")
+
+    monkeypatch.setattr(verification.subprocess, "check_output", output)
     return calls
 
 
@@ -43,7 +52,18 @@ def test_verify_runs_integration_without_unit_or_vitest(commands):
         for i, c in enumerate(command_lists)
         if c[-3:] == ["build", "backend", "frontend"]
     )
-    assert integration < migration < frontend_build < docker_build
+    smoke = [
+        i
+        for i, c in enumerate(command_lists)
+        if c[-1] == "scripts/verify_notifications.py"
+    ]
+    assert len(smoke) == 1
+    smoke_env = commands[smoke[0]][1]["env"]
+    assert smoke_env["REDIS_URL"] == "redis://127.0.0.1:16379/0"
+    assert smoke_env["MAILPIT_URL"] == "http://127.0.0.1:18025"
+    assert smoke_env["APP_ORIGIN"] == "http://127.0.0.1:18080"
+    assert integration < migration < frontend_build < docker_build < smoke[0]
+    assert smoke[0] < next(i for i, c in enumerate(command_lists) if "e2e" in c)
     assert any(c[-5:] == ["exec", "-T", "nginx", "nginx", "-t"] for c in command_lists)
     assert command_lists[-3:] == [
         [
@@ -92,7 +112,7 @@ def test_e2e_skips_python_suites(commands):
     assert commands[-1][0][-3:] == ["down", "--volumes", "--remove-orphans"]
 
 
-@pytest.mark.parametrize("failure_index", range(12))
+@pytest.mark.parametrize("failure_index", range(13))
 def test_failure_propagates_and_cleans_up(commands, monkeypatch, failure_index):
     error = subprocess.CalledProcessError(17, ["failing-command"])
 
@@ -106,3 +126,15 @@ def test_failure_propagates_and_cleans_up(commands, monkeypatch, failure_index):
         verification.verify("verify")
     assert caught.value is error
     assert commands[-1][0][-3:] == ["down", "--volumes", "--remove-orphans"]
+
+
+def test_final_origin_reaches_worker_and_beat_before_smoke(commands):
+    verification.verify("verify")
+    final_start = next(
+        (command, kwargs)
+        for command, kwargs in commands
+        if "up" in command
+        and kwargs["env"]["APP_ORIGIN"] == "http://127.0.0.1:18080"
+        and command[-1] != "postgres"
+    )
+    assert set(final_start[0][-3:]) == {"nginx", "worker", "beat"}
