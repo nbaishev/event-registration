@@ -36,4 +36,8 @@ Review: просмотрен diff; добавлено только ожидан�
 
 Внесено ожидание заголовка списка мероприятий до повторного mount dashboard и удаления refresh cookie.
 
-Known limitations: полный `make verify` не запускался; PR не создавался.
+Known limitations: полный `make verify` не запускался; PR создан; см. ниже.
+
+## Pull Request
+
+https://github.com/nbaishev/event-registration/pull/26
