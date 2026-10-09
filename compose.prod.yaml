@@ -1,4 +1,4 @@
-# Temporary HTTP deployment. Use this file alone, without compose.yaml.
+# HTTPS production deployment. Use this file alone, without compose.yaml.
 name: event-registration-prod
 
 x-runtime: &runtime
@@ -40,9 +40,8 @@ services:
     build: ./backend
     image: event-registration-prod-backend:${APP_IMAGE_TAG:-latest}
     environment: &backend-environment
-      # Deliberate temporary HTTP mode: production enforces HTTPS/Secure cookies.
-      ENVIRONMENT: development
-      APP_ORIGIN: ${APP_ORIGIN:?Set the exact HTTP origin in .env.prod}
+      ENVIRONMENT: production
+      APP_ORIGIN: ${APP_ORIGIN:?Set the exact HTTPS origin in .env.prod}
       JWT_SECRET: ${JWT_SECRET:?Set a random JWT_SECRET in .env.prod}
       DB_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-event_registration}
@@ -99,19 +98,43 @@ services:
     <<: *runtime
     image: nginx:1.28-alpine
     ports:
-      - '${APP_PORT:-80}:80'
+      - '80:80'
+      - '443:443'
     volumes:
-      - ./infra/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./infra/nginx/production:/etc/nginx/templates:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - acme_webroot:/var/www/certbot:ro
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.prod}
+      NGINX_ENVSUBST_FILTER: '^APP_DOMAIN$'
     depends_on:
       backend:
         condition: service_healthy
       frontend:
         condition: service_started
+    extra_hosts:
+      - "${APP_DOMAIN:?Set APP_DOMAIN in .env.prod}:127.0.0.1"
     healthcheck:
-      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/api/ready]
+      test: [CMD-SHELL, 'wget --no-check-certificate -q -O /dev/null "https://$${APP_DOMAIN}/api/ready"']
       interval: 10s
       timeout: 5s
       retries: 12
 
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: [acme]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.prod}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL:?Set CERTBOT_EMAIL in .env.prod}
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+      - certbot_logs:/var/log/letsencrypt
+      - certbot_work:/var/lib/letsencrypt
+
 volumes:
+  letsencrypt:
+  acme_webroot:
+  certbot_logs:
+  certbot_work:
   postgres_data:

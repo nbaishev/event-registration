@@ -1,0 +1,36 @@
+# Temporary ACME ingress; use alone, never merge into production Compose.
+name: event-registration-prod
+services:
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.prod}
+      NGINX_ENVSUBST_FILTER: '^APP_DOMAIN$'
+    volumes:
+      - ./infra/nginx/bootstrap:/etc/nginx/templates:ro
+      - acme_webroot:/var/www/certbot:ro
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1/healthz]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: [acme]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.prod}
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL:?Set CERTBOT_EMAIL in .env.prod}
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - acme_webroot:/var/www/certbot
+      - certbot_logs:/var/log/letsencrypt
+      - certbot_work:/var/lib/letsencrypt
+
+volumes:
+  letsencrypt:
+  acme_webroot:
+  certbot_logs:
+  certbot_work:

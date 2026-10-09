@@ -1,0 +1,55 @@
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        try_files $uri =404;
+    }
+    location / { return 308 https://${APP_DOMAIN}$request_uri; }
+}
+
+limit_req_zone $binary_remote_addr zone=auth_login:10m rate=10r/m;
+
+server {
+    listen 443 ssl;
+    server_name ${APP_DOMAIN};
+    ssl_certificate /etc/letsencrypt/live/${APP_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${APP_DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    location = /api/auth/login {
+        limit_req zone=auth_login burst=5 nodelay;
+        limit_req_status 429;
+        error_page 429 = @auth_login_rate_limited;
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location @auth_login_rate_limited {
+        default_type application/json;
+        add_header Cache-Control "no-store" always;
+        return 429 '{"error":{"code":"AUTH_RATE_LIMITED","message":"Too many login attempts.","details":{}}}';
+    }
+    location ~ ^/api/events/[^/]+/stats/stream$ {
+        proxy_pass http://backend:8000;
+        proxy_buffering off;
+        proxy_read_timeout 60s;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location / {
+        proxy_pass http://frontend:80;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
