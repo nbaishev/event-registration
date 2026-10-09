@@ -1,285 +1,86 @@
 # Project Submission
 
-Этот документ содержит сведения, необходимые для передачи и оценки проекта.
+## 1. Ссылка на repository
 
-Заполняется постепенно в ходе разработки и окончательно проверяется перед сдачей.
+https://github.com/nbaishev/event-registration
 
----
+Основная ветка: `master`.
 
-## 1. Repository
+## 2. Инструменты и модели
 
-GitHub:
+**Подготовка требований и архитектуры:** ChatGPT, **GPT-5.6 Sol**. Использовался для анализа требований, выбора архитектуры и подготовки Product Spec. Выбран для имитации обсуждения проекта и принятия решений в команде до начала кодирования.
 
-```text
-<repository URL>
-```
+**Разработка:** Codex, **GPT-6.1 Sol**. Использовался для подготовки планов, реализации, запуска tests и исправлений после review. Выбран для работы с кодом и проверки результата непосредственно в repository.
 
-Main branch:
+## 3. Промпты и ход работы
 
-```text
-master
-```
+Ниже задачи расположены по времени начала. Названия кратко описывают содержание запросов; исходные тексты находятся по ссылкам.
 
-Final commit:
-
-```text
-<commit SHA>
-```
-
----
-
-## 2. Tools and models
-
-### Pre-development / architecture
-
-Tool:
-
-```text
-ChatGPT
-```
-
-Model:
-
-```text
-GPT-5.6 Sol
-```
-
-Использование:
-
-- анализ требований;
-- architecture review;
-- определение scope;
-- формирование Product Spec;
-- разработка agent rules и development process.
-
-Почему выбран:
-
-ChatGPT использовался для итеративного анализа требований и критического review архитектуры до начала кодирования.
-
-### Implementation
-
-Tool:
-
-```text
-Codex
-```
-
-Model:
-
-```text
-<record the actual model used>
-```
-
-Использование:
-
-- работа непосредственно с repository;
-- implementation plans;
-- изменение кода;
-- запуск tests;
-- review и corrections.
-
-Почему выбран:
+| Дата | Запрос / этап | Журнал |
+|---|---|---|
+| 04.10.2026 | Требования, архитектура и правила разработки | [Project documents](development-log/2026-10-04-initial-project-document.md) |
+| 04.10.2026 | Основа проекта и quality gates | [Foundation](development-log/2026-10-04-project-foundation.md) |
+| 04.10.2026 | Регистрация аккаунта | [Auth register](development-log/2026-10-04-auth-register.md) |
+| 04.10.2026 | Вход и выход | [Login / logout](development-log/2026-10-04-auth-login-logout.md) |
+| 05.10.2026 | Обновление авторизации | [Auth refresh](development-log/2026-10-05-auth-refresh.md) |
+| 05.10.2026 | Планирование управления мероприятиями | [Events planning](development-log/2026-10-05-day2-events-planning.md) |
+| 05.10.2026 | Создание черновика мероприятия | [Draft creation](development-log/2026-10-05-event-draft-create.md) |
+| 06.10.2026 | Редактирование черновика | [Draft editing](development-log/2026-10-06-event-draft-edit.md) |
+| 06.10.2026 | Исправления редактирования | [Draft corrections](development-log/2026-10-06-event-draft-edit-bugfixes.md) |
+| 06.10.2026 | Публикация и публичная страница | [Event publishing](development-log/2026-10-06-event-publish.md) |
+| 06.10.2026 | Исправление auth-refresh E2E | [E2E correction](development-log/2026-10-06-auth-refresh-e2e.md) |
+| 06.10.2026 | Регистрация, билет и очередь ожидания | [Registration](development-log/2026-10-06-event-registration.md), [публикация PR](development-log/2026-10-06-event-registration-pr.md) |
+| 06–07.10.2026 | Отмена регистрации и продвижение очереди | [Cancellation / promotion](development-log/2026-10-06-registration-cancel.md) |
+| 07.10.2026 | Изменение вместимости | [Event capacity](development-log/2026-10-07-event-capacity.md) |
+| 07.10.2026 | Синхронизация auth-refresh E2E | [E2E synchronization](development-log/2026-10-07-auth-refresh-e2e-sync.md) |
+| 07.10.2026 | Список собственных регистраций | [My registrations](development-log/2026-10-07-my-registrations.md) |
+| 07.10.2026 | Исправление auth-refresh E2E в CI | [CI correction](development-log/2026-10-07-auth-refresh-e2e-ci.md) |
+| 07.10.2026 | Удаление пустого черновика | [Draft deletion](development-log/2026-10-07-event-draft-delete.md) |
+| 07.10.2026 | Изоляция login limiter в E2E | [Login rate isolation](development-log/2026-10-07-e2e-login-rate-isolation.md) |
+| 07.10.2026 | Устранение повторных запусков test suites | [Verification deduplication](development-log/2026-10-07-verification-suite-deduplication.md) |
+| 08.10.2026 | Check-in по билету | [Check-in](development-log/2026-10-08-check-in.md) |
+| 08.10.2026 | Статистика организатора | [Organizer statistics](development-log/2026-10-08-organizer-stats.md) |
+| 08.10.2026 | SSE для обновления статистики | [Statistics SSE](development-log/2026-10-08-stats-sse.md) |
+| 08.10.2026 | Live dashboard и восстановление соединения | [Dashboard reconnect](development-log/2026-10-08-live-dashboard-reconnect.md) |
+| 08.10.2026 | Письмо с подтверждением и билетом | [Confirmation email](development-log/2026-10-08-confirmation-email.md) |
+| 08.10.2026 | Email-напоминания | [Reminder email](development-log/2026-10-08-reminder-email.md) |
+| 09.10.2026 | Отдельный E2E job в CI | [E2E CI job](development-log/2026-10-08-ci-e2e-job.md) |
+| 09.10.2026 | Перенос опубликованного мероприятия | [Rescheduling](development-log/2026-10-09-event-reschedule.md) |
+| 09.10.2026 | Отмена мероприятия | [Event cancellation](development-log/2026-10-09-event-cancellation.md) |
+| 09.10.2026 | Доступ по домену на VPS | [Domain access](development-log/2026-10-09-domain-access.md) |
+| 09.10.2026 | Production HTTPS и Certbot | [HTTPS deployment](development-log/2026-10-09-production-https-certbot.md) |
+| 09.10.2026 | Исправление dashboard E2E в CI | [Dashboard CI correction](development-log/2026-10-09-live-dashboard-refresh-ci.md) |
 
 
+## 4. Описание проекта и развёртывание
 
-Перед сдачей указать **реальную модель**, использованную во время implementation. Не заполнять её предположением заранее.
+Сервис регистрации на мероприятия на **FastAPI, PostgreSQL и React**. Фоновые задачи выполняются через **Celery и Redis**.
 
-Если в ходе разработки использовались другие инструменты или модели, добавить их сюда.
+Реализованы аккаунты, создание и публикация мероприятий, регистрация участников, очередь ожидания с автоматическим продвижением, билеты, check-in, live-статистика и email-уведомления.
 
----
+**Рабочая версия:** https://aian.space
 
-## 3. AI prompts and decision history
+Для проверки начните с https://aian.space/register.
 
-Полный экспорт AI session не сдаётся.
+### Локальный запуск
 
-Вместо него используются:
-
-```text
-docs/development-log/
-docs/adr/
-docs/superpowers/specs/
-docs/superpowers/plans/
-```
-
-Development logs содержат:
-
-- точный execution prompt;
-- значимые corrective prompts;
-- timeline;
-- decisions/deviations;
-- verification evidence;
-- результаты.
-
-Architecture decisions вынесены в:
-
-```text
-docs/adr/
-```
-
----
-
-## 4. Work timeline
-
-Постепенный ход работы подтверждается двумя независимыми источниками:
-
-### Git history
+Требуются Python 3.12, uv, Node.js 22.13+, Corepack, Docker Compose и make. Точные версии и конфигурация описаны в [README](../README.md).
 
 ```bash
-git log --date=iso --pretty=fuller
+git clone https://github.com/nbaishev/event-registration.git
+cd event-registration
+make bootstrap
+make up
 ```
 
-Коммиты создаются по ходу реализации, а не одним commit в конце.
+- Frontend: http://localhost:8080/register
+- API documentation: http://localhost:8080/api/docs
+- Миграции выполняются автоматически.
+- Остановка: `make down`; данные PostgreSQL сохраняются.
 
-### Development logs
+## 5. Следующий этап и почему
 
-Каждая implementation task содержит:
-
-```text
-Started at
-Timeline
-Verification timestamps
-Finished at
-```
-
-с timezone-aware ISO timestamps.
-
-Основной индекс:
-
-```text
-docs/development-log/
-```
-
-Не изменять искусственно timestamps для создания видимости постепенной работы.
-
----
-
-## 5. Project description and deployment
-
-Каноническая инструкция находится в:
-
-```text
-README.md
-```
-
-README должен содержать:
-
-- назначение проекта;
-- реализованные возможности;
-- prerequisites;
-- configuration;
-- `make bootstrap`;
-- `make up`;
-- migrations;
-- как открыть frontend;
-- как проверить API;
-- как запустить tests;
-- known limitations;
-- текущее состояние проекта.
-
-Не дублировать полную deployment-инструкцию здесь.
-
-Final status:
-
-```text
-<COMPLETE / PARTIAL / DEMO READY>
-```
-
-Known blocking issues:
-
-```text
-<none or list>
-```
-
----
-
-## 6. Verification at submission
-
-Перед сдачей записать реальные результаты:
-
-```text
-make check
-Exit code: <...>
-Result: <actual final line>
-
-make verify
-Exit code: <...>
-Result: <actual final line>
-```
-
-Production/demo smoke test:
-
-```text
-<actual result>
-```
-
----
-
-## 7. What would be done next
-
-Функции, сознательно оставленные за пределами, но рекомендуемые для следующей итерации:
-
-- transactional outbox для надёжной доставки всех notification types;
-- server-side refresh sessions и refresh-token rotation;
-- multi-worker SSE через Redis Pub/Sub или другой shared transport;
-- полноценная observability;
-- password recovery;
-- email verification;
-- QR tickets;
-- PDF tickets;
-- более полный E2E suite;
-- deployment automation.
-
-Перед сдачей список должен быть пересмотрен по фактическому состоянию проекта.
-
-Не указывать уже реализованные возможности как future work.
-
----
-
-## 8. External solutions, templates and generators
-
-Для каждого внешнего источника, который существенно повлиял на проект, указать:
-
-```text
-Name:
-Source:
-Version/commit, if applicable:
-Used for:
-Modified:
-License:
-```
-
-Примеры того, что необходимо раскрыть:
-
-- starter templates;
-- boilerplates;
-- copied code;
-- substantial snippets;
-- generators;
-- OpenAPI generators;
-- UI templates;
-- external reference implementations.
-
-Стандартные package dependencies не требуется перечислять здесь целиком — они фиксируются lock files.
-
-### Planned generator
-
-OpenAPI TypeScript contract generation:
-
-```text
-Tool: openapi-typescript
-Purpose: generate frontend types from FastAPI OpenAPI
-```
-
-Перед сдачей зафиксировать реально использованную version через lock file.
-
-### Project origin
-
-Если проект написан с нуля:
-
-```text
-No external application or reference implementation was used as the project base.
-```
-
-Если это изменится во время разработки, этот раздел необходимо обновить.
-
----
+1. **Улучшить UI.**. Сейчас интерфейс минималистичный и не понятный пользователю.
+1. **Добавить надёжную доставку уведомлений.** Это уменьшит риск потери писем при сбоях брокера или SMTP.
+2. **Добавить восстановление пароля, email verification и отзыв сессий.** Это необходимо для самостоятельного обслуживания аккаунтов и управления доступом.
+3. **Добавить QR-билеты и расширить E2E coverage.** QR упростит check-in, а дополнительные сценарии снизят риск регрессий.
