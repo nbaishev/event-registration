@@ -279,6 +279,55 @@ def publish_owned_event(
     return event
 
 
+def cancel_owned_event(
+    session: Session,
+    clock: Clock,
+    owner_id: UUID,
+    event_id: UUID,
+    *,
+    notification_dispatcher: TransitionDispatcher,
+) -> Event:
+    try:
+        event = repository.find_event_for_update(session, event_id)
+        if event is None:
+            raise AppError(404, "EVENT_NOT_FOUND", "Event not found.")
+        if event.owner_id != owner_id:
+            raise AppError(403, "EVENT_NOT_OWNER", "You do not own this event.")
+        if event.status == EventStatus.CANCELLED:
+            raise AppError(409, "EVENT_CANCELLED", "Event is already cancelled.")
+        if event.status != EventStatus.PUBLISHED:
+            raise AppError(409, "EVENT_NOT_PUBLISHED", "Event is not published.")
+        now = clock.now()
+        if now >= event.starts_at:
+            raise AppError(409, "EVENT_ALREADY_STARTED", "Event has already started.")
+        event.status = EventStatus.CANCELLED
+        event.cancelled_at = event.updated_at = now
+        session.flush()
+        notices = [
+            TransitionNotice(
+                kind="EVENT_CANCELLED",
+                event_id=event.id,
+                occurred_at=now,
+                recipient=email,
+                title=event.title,
+                slug=event.slug,
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                timezone=event.timezone,
+            )
+            for email in find_transition_recipients(session, event.id)
+        ]
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        raise AppError(503, "SERVICE_UNAVAILABLE", "Database is unavailable.") from None
+    except Exception:
+        session.rollback()
+        raise
+    dispatch_transition_notices(notification_dispatcher, notices)
+    return event
+
+
 def get_public_event(session: Session, clock: Clock, slug: str) -> PublicEventResponse:
     event = repository.find_public_event(session, slug)
     if event is None:

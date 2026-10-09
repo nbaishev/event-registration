@@ -67,7 +67,8 @@ export function EventScheduleForm({ event }: { event: EventResponse }) {
       const incoming = valuesFor(saved);
       previous.current = incoming;
       setValues(incoming);
-      client.setQueryData(key, saved);
+      // A delayed PATCH response must not restore an event cancelled meanwhile.
+      client.setQueryData<EventResponse>(key, current => current?.status === 'CANCELLED' ? current : saved);
       void client.invalidateQueries({ queryKey: eventKeys.mine(saved.owner_id) });
       void client.invalidateQueries({ queryKey: publicEventKey(saved.slug), exact: true });
     } catch (cause) {

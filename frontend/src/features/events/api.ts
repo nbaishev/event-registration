@@ -13,6 +13,7 @@ export const deleteEvent = (id: string) => apiRequest<void>(`/api/events/${encod
 
 export type PublicEventResponse = components['schemas']['PublicEventResponse'];
 export const publishEvent = (id: string) => apiRequest<EventResponse>(`/api/events/${encodeURIComponent(id)}/publish`, { method: 'POST', requiresAuth: true });
+export const cancelEvent = (eventId: string): Promise<EventResponse> => apiRequest<EventResponse>(`/api/events/${encodeURIComponent(eventId)}/cancel`, { method: 'POST', requiresAuth: true });
 export const publicEventKey = (slug: string) => ['public-events', slug] as const;
 export const getPublicEvent = (slug: string, signal?: AbortSignal) => apiRequest<PublicEventResponse>(`/api/public/events/${encodeURIComponent(slug)}`, { signal });
 

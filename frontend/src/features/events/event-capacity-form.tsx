@@ -39,7 +39,8 @@ export function EventCapacityForm({ event }: { event: EventResponse }) {
       await client.cancelQueries({ queryKey: key, exact: true });
       previous.current = String(saved.capacity);
       setCapacity(String(saved.capacity));
-      client.setQueryData(key, saved);
+      // A delayed PATCH response must not restore an event cancelled meanwhile.
+      client.setQueryData<EventResponse>(key, current => current?.status === 'CANCELLED' ? current : saved);
       void client.invalidateQueries({ queryKey: eventKeys.mine(saved.owner_id) });
       void client.invalidateQueries({ queryKey: publicEventKey(saved.slug), exact: true });
     } catch (cause) {
