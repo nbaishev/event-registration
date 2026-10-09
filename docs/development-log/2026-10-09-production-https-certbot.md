@@ -99,6 +99,8 @@ Known limitations:
 
 Final verification: evidence выше. Ветка и worktree сохранены для review/integration.
 
+GitHub connector опубликовал проверенное дерево `6086293885d96f7f6b3bfdd6fb1eba26c77bdba6` с remote commit `a93d8ee`; local implementation commit `869ea76` имеет то же дерево. HTTPS/SSH CLI credentials недоступны. PR создан в master; повторный gate не запускался, код/configuration не менялись.
+
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/25
