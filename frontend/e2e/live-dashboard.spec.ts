@@ -120,6 +120,9 @@ test('live-dashboard: interrupted stream recovers missed snapshot with missing a
   // Remount with the same finite transport to force a second interruption.
   // SPA navigation preserves the existing auth/session implementation.
   await page.getByRole('link', { name: 'Мои мероприятия' }).click();
+  // Wait for the dashboard to unmount before returning: SPA navigation can
+  // still be pending when click() resolves, leaving the old stream alive.
+  await expect(page.getByRole('heading', { name: 'Мои мероприятия' })).toBeVisible();
   interrupt = true;
   await page.context().clearCookies({ name: 'refresh_token' });
   const rejected = page.waitForResponse(response => response.url().endsWith('/api/auth/refresh'));
