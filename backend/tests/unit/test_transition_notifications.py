@@ -57,7 +57,8 @@ def test_dispatch_continues_and_logs_no_payload(caplog):
     assert "snapshot@example.com" not in caplog.text and "secret" not in caplog.text
 
 
-def test_task_sends_snapshot_once_without_database(monkeypatch, caplog):
+@pytest.mark.parametrize("kind", ["EVENT_RESCHEDULED", "EVENT_CANCELLED"])
+def test_task_sends_snapshot_once_without_database(monkeypatch, caplog, kind):
     from types import SimpleNamespace
 
     from app.notifications import tasks
@@ -77,7 +78,25 @@ def test_task_sends_snapshot_once_without_database(monkeypatch, caplog):
         tasks, "get_engine", lambda: pytest.fail("Snapshot task must not read DB")
     )
     with pytest.raises(tasks.NotificationTaskFailure):
-        tasks.send_transition_notice.run(notice().model_dump(mode="json"))
+        tasks.send_transition_notice.run(
+            notice().model_copy(update={"kind": kind}).model_dump(mode="json")
+        )
     assert len(messages) == 1
     assert tasks.send_transition_notice.max_retries == 0
     assert "secret" not in caplog.text and "snapshot@example.com" not in caplog.text
+
+
+@pytest.mark.parametrize("kind", ["EVENT_CANCELLED", "EVENT_RESCHEDULED"])
+def test_transition_kind_snapshot_render(kind):
+    from app.notifications.rendering import render_transition_email
+
+    n = notice().model_copy(update={"kind": kind})
+    mail = render_transition_email(n, "https://example.com")
+    assert mail.subject == (
+        "Мероприятие отменено"
+        if kind == "EVENT_CANCELLED"
+        else "Изменение расписания мероприятия"
+    )
+    assert "2026-10-11 18:00" in mail.body
+    assert "https://example.com/events/conference" in mail.body
+    assert n.title in mail.body and mail.recipient == n.recipient

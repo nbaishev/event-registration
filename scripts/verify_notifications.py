@@ -42,6 +42,8 @@ def verify_notifications(kind: str = "confirmation") -> None:
     now = SystemClock().now()
     reminder = kind == "reminder"
     reschedule = kind == "reschedule"
+    cancellation = kind == "cancellation"
+    transition = reschedule or cancellation
     password = "smoke-" + uuid4().hex
     starts = now + timedelta(hours=23) if reminder else now + timedelta(days=2)
     cutoff = starts - timedelta(hours=24)
@@ -52,6 +54,8 @@ def verify_notifications(kind: str = "confirmation") -> None:
     )
     if reschedule:
         subject = "Изменение расписания мероприятия"
+    if cancellation:
+        subject = "Мероприятие отменено"
     slug = f"notification-smoke-{event_id}"
     message_ids: list[str] = []
     try:
@@ -102,14 +106,14 @@ def verify_notifications(kind: str = "confirmation") -> None:
                     confirmed_at=cutoff,
                     ticket_code=ticket,
                     ticket_issued_at=cutoff,
-                    confirmation_email_sent_at=now if reminder or reschedule else None,
+                    confirmation_email_sent_at=now if reminder or transition else None,
                     created_at=now,
                     updated_at=now,
                 )
             )
             session.commit()
         # Scanner is executed by the actual worker; eager mode is never enabled.
-        if reschedule:
+        if transition:
             opener = urllib.request.build_opener(
                 urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
             )
@@ -136,16 +140,20 @@ def verify_notifications(kind: str = "confirmation") -> None:
                 "POST",
                 {"email": f"smoke-owner-{owner_id}@example.com", "password": password},
             )
-            starts += timedelta(days=1)
-            saved = api_request(
-                f"/api/events/{event_id}",
-                "PATCH",
-                {
-                    "starts_at": starts.isoformat(),
-                    "ends_at": (starts + timedelta(hours=2)).isoformat(),
-                },
-            )
-            assert saved["starts_at"] == starts.isoformat().replace("+00:00", "Z")
+            if cancellation:
+                saved = api_request(f"/api/events/{event_id}/cancel", "POST", {})
+                assert saved["status"] == "CANCELLED"
+            else:
+                starts += timedelta(days=1)
+                saved = api_request(
+                    f"/api/events/{event_id}",
+                    "PATCH",
+                    {
+                        "starts_at": starts.isoformat(),
+                        "ends_at": (starts + timedelta(hours=2)).isoformat(),
+                    },
+                )
+                assert saved["starts_at"] == starts.isoformat().replace("+00:00", "Z")
         else:
             scanner = scan_reminder if reminder else scan_confirmation
             scanner.delay()
@@ -159,7 +167,7 @@ def verify_notifications(kind: str = "confirmation") -> None:
                     received = sink_json(f"/api/v1/message/{message['ID']}")
             with Session(engine) as session:
                 row = session.get(Registration, registration_id)
-                sent = reschedule or (
+                sent = transition or (
                     row is not None
                     and (
                         row.reminder_sent_at
@@ -175,7 +183,7 @@ def verify_notifications(kind: str = "confirmation") -> None:
             raise RuntimeError("Notification broker/worker/SMTP smoke timed out")
         assert received["Subject"] == subject
         assert "Проверка доставки билета" in received["Text"]
-        if reschedule:
+        if transition:
             from zoneinfo import ZoneInfo
 
             expected = starts.astimezone(ZoneInfo("Asia/Bishkek")).strftime(
@@ -186,13 +194,21 @@ def verify_notifications(kind: str = "confirmation") -> None:
             with Session(engine) as session:
                 saved_event = session.get(Event, event_id)
                 assert saved_event is not None and saved_event.starts_at == starts
+                if cancellation:
+                    assert saved_event.status == "CANCELLED"
+                    assert saved_event.cancelled_at == saved_event.updated_at
         else:
             assert formatted in received["Text"]
         assert f"{os.environ['APP_ORIGIN']}/events/{slug}" in received["Text"]
         assert "Asia/Bishkek" in received["Text"] and "UTC+06:00" in received["Text"]
         assert received["HTML"] == ""
         print(
-            f"Notification {kind} smoke: real broker, worker, SMTP, ticket and committed timestamp passed."
+            f"Notification {kind} smoke: real broker, worker, SMTP, "
+            + (
+                "transition snapshot and committed event passed."
+                if transition
+                else "ticket and committed timestamp passed."
+            )
         )
     finally:
         # Delete only this smoke's rows; it runs before browser scenarios.
@@ -218,3 +234,4 @@ if __name__ == "__main__":
     verify_notifications()
     verify_notifications("reminder")
     verify_notifications("reschedule")
+    verify_notifications("cancellation")

@@ -3,7 +3,8 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogContentText,
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate, useParams, useOutletContext } from 'react-router';
 import { ApiError } from '../../api/client';
-import { deleteEvent, eventKeys, getEvent, publishEvent, type EventSummary } from './api';
+import { cancelEvent, deleteEvent, eventKeys, getEvent, publicEventKey, publishEvent, type EventSummary } from './api';
+import { registrationKeys } from '../registrations/api';
 import { formatEventTime } from './event-time';
 import { EventStats } from './event-stats';
 import { EventScheduleForm } from './event-schedule-form';
@@ -15,6 +16,20 @@ export function EventDetailPage() {
   const client = useQueryClient();
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancellation = useMutation({
+    mutationFn: () => cancelEvent(eventId),
+    onSuccess: async saved => {
+      const key = eventKeys.detail(saved.owner_id, saved.id);
+      await client.cancelQueries({ queryKey: key, exact: true });
+      client.setQueryData(key, saved);
+      setConfirmCancel(false);
+      void client.invalidateQueries({ queryKey: eventKeys.mine(saved.owner_id) });
+      void client.invalidateQueries({ queryKey: publicEventKey(saved.slug), exact: true });
+      void client.invalidateQueries({ queryKey: registrationKeys.mine(ownerId), exact: true });
+      void client.invalidateQueries({ queryKey: registrationKeys.detail(ownerId, saved.id), exact: true });
+    },
+  });
   const deletion = useMutation({
     mutationFn: () => deleteEvent(eventId),
     onSuccess: async () => {
@@ -48,6 +63,25 @@ export function EventDetailPage() {
   const event = query.data;
   return <Paper variant="outlined" sx={{ p: 4 }}><Stack spacing={3}>
     <Typography component="h1" variant="h4">{event.title}</Typography>
+    {event.status === 'PUBLISHED' && <Button color="error" disabled={cancellation.isPending} onClick={() => { cancellation.reset(); setConfirmCancel(true); }}>Отменить мероприятие</Button>}
+    <Dialog open={confirmCancel} onClose={() => { if (!cancellation.isPending) setConfirmCancel(false); }} aria-labelledby="cancel-event-title">
+      <DialogTitle id="cancel-event-title">Отменить мероприятие?</DialogTitle>
+      <DialogContent>
+        <DialogContentText>Мероприятие будет отменено без возможности восстановления. Участники и список ожидания получат уведомление об отмене.</DialogContentText>
+        {cancellation.isError && <Alert severity="error">{cancellation.error instanceof ApiError ? {
+          EVENT_NOT_OWNER: 'Нет доступа к этому мероприятию.',
+          EVENT_NOT_FOUND: 'Мероприятие не найдено.',
+          EVENT_CANCELLED: 'Мероприятие уже отменено.',
+          EVENT_NOT_PUBLISHED: 'Мероприятие не опубликовано.',
+          EVENT_ALREADY_STARTED: 'Мероприятие уже началось. Отмена недоступна.',
+          CSRF_INVALID: 'Защита запроса обновлена. Повторите попытку.',
+        }[cancellation.error.code] ?? 'Не удалось отменить мероприятие. Повторите попытку.' : 'Не удалось отменить мероприятие. Повторите попытку.'}</Alert>}
+      </DialogContent>
+      <DialogActions>
+        <Button disabled={cancellation.isPending} onClick={() => setConfirmCancel(false)}>Назад</Button>
+        <Button color="error" variant="contained" disabled={cancellation.isPending} onClick={() => { if (!cancellation.isPending) cancellation.mutate(); }}>{cancellation.isPending ? 'Отменяем…' : 'Подтвердить отмену'}</Button>
+      </DialogActions>
+    </Dialog>
     {event.status === 'DRAFT' && <Button component={RouterLink} to={`/organizer/events/${event.id}/edit`} variant="contained">Редактировать черновик</Button>}
     {event.status === 'DRAFT' && <Button variant="contained" disabled={publication.isPending || deletion.isPending} onClick={() => publication.mutate()}>{publication.isPending ? 'Публикуем…' : 'Опубликовать'}</Button>}
     {event.status === 'DRAFT' && <Button color="error" disabled={deletion.isPending || publication.isPending} onClick={() => { deletion.reset(); setConfirmDelete(true); }}>Удалить черновик</Button>}

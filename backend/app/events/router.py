@@ -19,6 +19,7 @@ from app.events.schemas import (
     StatsResponse,
 )
 from app.events.service import (
+    cancel_owned_event,
     create_event,
     delete_owned_event,
     get_owned_event,
@@ -133,6 +134,31 @@ def publish_event(
 ) -> EventResponse:
     return EventResponse.model_validate(
         publish_owned_event(session, clock, user.id, event_id)
+    )
+
+
+@router.post(
+    "/{event_id}/cancel",
+    response_model=EventResponse,
+    responses={404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
+def cancel_event(
+    event_id: UUID,
+    user: CurrentUser,
+    session: DatabaseSession,
+    clock: Annotated[Clock, Depends(get_clock)],
+    notification_dispatcher: Annotated[
+        TransitionDispatcher, Depends(get_transition_dispatcher)
+    ],
+) -> EventResponse:
+    return EventResponse.model_validate(
+        cancel_owned_event(
+            session,
+            clock,
+            user.id,
+            event_id,
+            notification_dispatcher=notification_dispatcher,
+        )
     )
 
 
