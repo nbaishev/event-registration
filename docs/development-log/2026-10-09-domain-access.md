@@ -95,4 +95,4 @@ Known limitations: временный HTTP/development security mode; внешн
 
 ## Pull Request
 
-Not created yet.
+https://github.com/nbaishev/event-registration/pull/24
