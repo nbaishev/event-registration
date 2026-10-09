@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew event-registration TLS certificate and reload Docker Nginx
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/event-registration
+ExecStart=/opt/event-registration/infra/certbot/renew.sh
