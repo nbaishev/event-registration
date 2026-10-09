@@ -1,9 +1,10 @@
 # Event Registration Service
 
-Клиент-серверный сервис регистрации на мероприятия. Реализованы Foundation и
-Auth Register/Login/Logout/Refresh: PostgreSQL, Alembic, FastAPI и React UI аккаунта.
-Добавлены создание, список и owner-details черновиков мероприятий.
-Публикация, редактирование, регистрации на мероприятия, waitlist, билеты и уведомления пока не реализованы.
+Клиент-серверный сервис регистрации на мероприятия на FastAPI, PostgreSQL и React.
+Реализованы аккаунты, управление мероприятиями, публичные страницы, регистрации
+с очередью ожидания, билеты, check-in, live-статистика и email-уведомления.
+Фоновые задачи выполняются Celery через Redis; локальная почта поступает в Mailpit.
+Для production предусмотрен отдельный HTTPS stack с Nginx и Certbot.
 
 ## Требования
 
@@ -43,14 +44,17 @@ http://localhost:8080/api/docs. Backend запускается ровно с о�
 
 Альтернативный запуск после bootstrap: `docker compose up --build`.
 Backend выполняет `alembic upgrade head` перед запуском сервера; миграция `0001`
-создаёт таблицу `users`, `0002` — `events`. Дополнительная команда `make migrate` для первого запуска не нужна.
+создаёт таблицу `users`, `0002` — `events`, `0003` — `registrations`.
+Дополнительная команда `make migrate` для первого запуска не нужна.
 
 Остановка: `make down`. Данные PostgreSQL сохраняются в Compose volume.
 DB port не публикуется в development stack. Если порт 8080 занят, измените
 APP_PORT и APP_ORIGIN в `.env` согласованно. Container backend получает DB_HOST и POSTGRES_USER/PASSWORD/DB раздельно;
 SQLAlchemy собирает URL безопасно, включая reserved characters в password.
 Host tooling получает test URL отдельно.
-Для production HTTP-конфигурация не предназначена; HTTPS/VPS deployment — Day 6.
+Development stack также запускает Redis, Celery worker, beat и Mailpit.
+Порты Redis и Mailpit не публикуются на хост; SMTP по умолчанию — `mailpit:1025`.
+Для production используйте отдельный HTTPS stack (см. ниже).
 
 ## Регистрация аккаунта
 
@@ -94,7 +98,7 @@ Nginx ограничивает только точный login route: `10r/m`, `
 client IP. Rejection → 429 `AUTH_RATE_LIMITED` в общем JSON envelope с no-store;
 произвольный X-Forwarded-For не меняет limiter key.
 
-## Черновики мероприятий
+## Управление мероприятиями
 
 После входа откройте «Мои мероприятия» в аккаунте или `/organizer/events`.
 Создайте черновик на `/organizer/events/new`: название 1–200 символов после trim,
@@ -108,16 +112,30 @@ client IP. Rejection → 429 `AUTH_RATE_LIMITED` в общем JSON envelope с 
 
 После сохранения откроется `/organizer/events/:eventId`. Reload сохраняет данные;
 `/organizer/events` показывает только собственные мероприятия, новые первыми.
-Событие создаётся с status DRAFT; редактирование и публикация — следующие задачи.
-Публичная страница по slug пока недоступна.
+Событие создаётся со статусом `DRAFT`. На странице деталей доступны редактирование
+(`/organizer/events/:eventId/edit`), публикация и удаление черновика.
+При редактировании черновика можно заново сгенерировать slug.
+
+После публикации ссылка `/events/:slug` доступна без входа. Черновики публично
+не видны. Завершённые события отображаются как `FINISHED`, отменённые — как
+`CANCELLED`. До начала опубликованного события организатор может отдельно менять
+расписание или вместимость и отменить мероприятие. Вместимость нельзя уменьшить
+ниже числа подтверждённых регистраций; увеличение автоматически освобождает
+места для очереди ожидания. Отмена мероприятия блокирует новые регистрации
+и check-in; существующие записи регистраций сохраняются.
 
 | Method | Endpoint | Результат |
 |---|---|---|
 | POST | `/api/events` | 201 EventResponse, новый DRAFT |
 | GET | `/api/events/mine` | 200 массив EventSummary, `created_at DESC, id DESC` |
 | GET | `/api/events/{event_id}` | 200 EventResponse, только owner |
+| PATCH | `/api/events/{event_id}` | Редактирование черновика; расписание или вместимость опубликованного события |
+| POST | `/api/events/{event_id}/publish` | Публикация черновика |
+| POST | `/api/events/{event_id}/cancel` | Отмена опубликованного события до начала |
+| DELETE | `/api/events/{event_id}` | 204, удаление черновика без регистраций |
+| GET | `/api/public/events/{slug}` | Публичные детали, без авторизации |
 
-Все endpoints требуют access-cookie auth; POST также CSRF и exact Origin.
+Приватные endpoints требуют access-cookie auth; изменяющие запросы также CSRF и exact Origin.
 Client задаёт `requiresAuth: true`, поэтому существующий refresh flow работает и
 для этих запросов. Неавторизованный запрос → 401 AUTH_REQUIRED; чужой Event →
 403 EVENT_NOT_OWNER; отсутствующий → 404 EVENT_NOT_FOUND; invalid input →
@@ -126,8 +144,74 @@ Slug генерирует backend с random suffix, уникальность о�
 
 [Форма создания](docs/screenshots/event-create.png) · [Сохранённый черновик](docs/screenshots/event-detail.png).
 
-Browser test проверяет create → details reload → mine reload и отказ второму
-аккаунту. Полный gate: `make verify`.
+## Регистрации, очередь ожидания и билеты
+
+На публичной странице `/events/:slug` пользователь после входа может
+зарегистрироваться до начала мероприятия. Организатор не может зарегистрироваться
+на собственное событие. При наличии места регистрация получает статус `CONFIRMED`
+и код билета; при заполнении — `WAITLIST` с позицией в очереди.
+
+Участник может отменить регистрацию до начала и затем зарегистрироваться снова.
+При освобождении места следующий участник очереди автоматически получает
+подтверждение и билет. Раздел `/me/registrations` показывает собственные
+регистрации, статусы мероприятий и билеты. Код билета содержит 12 символов и
+отображается в формате `XXXX-XXXX-XXXX`.
+
+| Method | Endpoint | Назначение |
+|---|---|---|
+| POST | `/api/events/{event_id}/registrations` | Регистрация или повторная регистрация после отмены |
+| GET | `/api/events/{event_id}/my-registration` | Собственная регистрация на событие |
+| DELETE | `/api/events/{event_id}/registration` | Отмена собственной регистрации |
+| GET | `/api/me/registrations` | Все собственные регистрации |
+
+Эти запросы требуют авторизации; изменяющие запросы — CSRF и exact Origin.
+
+## Check-in и live-статистика
+
+Организатор отмечает участников по коду билета на
+`/organizer/events/:eventId/check-in`. Check-in открыт за два часа до начала
+опубликованного мероприятия и до его окончания. При вводе допустимы пробелы,
+дефисы и нижний регистр. Билет должен принадлежать подтверждённой регистрации
+именно этого события; повторная отметка возвращает `TICKET_ALREADY_CHECKED_IN`.
+API: `POST /api/events/{event_id}/check-ins` с полем `ticket_code`.
+
+Страница деталей организатора показывает вместимость, подтверждённые регистрации,
+очередь ожидания, отмеченных участников и свободные места.
+`GET /api/events/{event_id}/stats` возвращает снимок статистики;
+`GET /api/events/{event_id}/stats/stream` отправляет SSE-события `stats_changed`,
+после которых клиент запрашивает свежий снимок. Доступ есть только у владельца,
+для черновиков статистика недоступна. Клиент восстанавливает соединение при обрыве.
+In-memory broadcaster требует запуска backend ровно с одним worker.
+
+## Email-уведомления
+
+Celery beat каждые пять минут запускает сканирование подтверждений и напоминаний.
+Подтверждённый участник получает письмо с билетом, в том числе после перехода
+из очереди ожидания. Напоминание отправляется в течение последних 24 часов
+до начала, если регистрация была подтверждена и расписание обновлено не позднее
+чем за 24 часа до начала. Неотправленные подтверждения и напоминания повторно
+подбираются следующим сканированием, пока выполняются условия отправки.
+
+Перенос и отмена мероприятия ставят отдельные письма в очередь после commit
+для подтверждённых участников и очереди ожидания. Эти письма отправляются
+без автоматического retry; гарантированная доставка не реализована.
+
+Локально используется Mailpit; для production задаются `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_FROM`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD` и
+`SMTP_TIMEOUT_SECONDS`. Поддерживаются `none`, `starttls` и `tls`.
+
+## Production: HTTPS на VPS
+
+Используйте `compose.prod.yaml` отдельно от development Compose и настройте
+`.env.prod` по [.env.prod.example](.env.prod.example): домен, точный HTTPS origin,
+отдельные секреты БД/JWT и внешний SMTP relay. Production stack публикует только
+порты Nginx 80/443 и не содержит Mailpit.
+
+Первый запуск включает HTTP bootstrap для ACME, выпуск сертификата и
+`make prod-up`. Команды `make prod-ps`, `make prod-logs` и `make prod-down`
+управляют stack; для продления сертификата предусмотрены
+`make prod-cert-renew` и systemd timer. Настройка DNS, firewall, выпуска и
+автоматического продления описана в [инструкции развёртывания на VPS](docs/deployment-vps.md).
 
 ## Проверки
 
@@ -164,7 +248,7 @@ tracked output; drift завершает gate с ошибкой без пере�
 ## Документы
 
 - [Product spec](docs/superpowers/specs/technical-design.md)
-- [Foundation plan](docs/superpowers/plans/01-2026-10-04-project-foundation.md)
-- [Event Draft Creation plan](docs/superpowers/plans/05-2026-10-05-event-draft-create.md)
+- [Implementation plans](docs/superpowers/plans/)
+- [Развёртывание на VPS](docs/deployment-vps.md)
 - [Development lifecycle](docs/development-process.md)
 - [Agent instructions](AGENTS.md)
