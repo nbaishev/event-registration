@@ -81,6 +81,10 @@ Final verification: evidence в разделе Final verification; после у
 
 ## Pull Request
 
-Not created yet. Automatic approval review rejected external publication; awaiting explicit user authorization. Prepared description: `/tmp/task20-pr-body.md`.
+https://github.com/nbaishev/event-registration/pull/23
+
+Published at: 2026-10-09T13:06:09+06:00
+
+После явного разрешения пользователя «Разрешаю» опубликованы все 18 файлов, включая два PNG, через GitHub connector. Remote tree `65b071fe55f1741637d9d34bf6843519b7434315` точно совпал с локальным commit `64c19c5`. Remote commit `df19edab609e0ce79fb09ff286c3b48ffcdc6ec6` отличается SHA из-за metadata Git Data API; содержимое идентично. Локальная ветка сохранена; перед будущим git push потребуется синхронизация с remote. После публикации изменён только журнал, повторный make verify не требуется.
 
 Staged secrets review: scope/files проверены; secret patterns отсутствуют; credentials только явные тестовые.
